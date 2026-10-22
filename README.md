@@ -1,4 +1,4 @@
-# Snapkit
+# Snap
 
 An open-source screenshot tool for macOS, in the spirit of CleanShot X.
 It lives in the menu bar, captures with ScreenCaptureKit, and handles multiple displays and
@@ -30,7 +30,7 @@ Retina scaling.
 | Capture fullscreen (display under the pointer) | ⌥⇧3 |
 
 All three can be changed in Settings › Shortcuts. The defaults stay off macOS's own ⌘⇧3/4/5;
-to use those for Snapkit, turn them off first in System Settings › Keyboard ›
+to use those for Snap, turn them off first in System Settings › Keyboard ›
 Keyboard Shortcuts › Screenshots.
 
 In the editor: A arrow, R rectangle, T text, H highlight, P pixelate, B blur, N counter;
@@ -44,18 +44,18 @@ In the editor: A arrow, R rectangle, T text, H highlight, P pixelate, B blur, N 
 ## Building
 
 ```sh
-make app      # builds build/Snapkit.app
+make app      # builds build/Snap.app
 make run      # builds, then (re)launches the app
 make test     # runs unit tests
 CONFIG=release make app
 ```
 
-Snapkit is a plain Swift package; `open Package.swift` works for editing and running tests in
+Snap is a plain Swift package; `open Package.swift` works for editing and running tests in
 Xcode. Launch the app through `make run` rather than Xcode's Run button: only the bundled `.app`
 gets its own Screen Recording permission.
 
 `make test` skips the tests that take real screenshots. Run them with
-`SNAPKIT_INTEGRATION=1 make test` from a terminal that has Screen Recording access; one of them
+`SNAP_INTEGRATION=1 make test` from a terminal that has Screen Recording access; one of them
 briefly shows a small test window.
 
 ### Code signing
@@ -72,7 +72,7 @@ SIGN_IDENTITY = Apple Development: Your Name (TEAMID)
 
 ## Permissions
 
-Snapkit needs Screen Recording access (System Settings › Privacy & Security ›
+Snap needs Screen Recording access (System Settings › Privacy & Security ›
 Screen & System Audio Recording). On first launch it shows a short guide that opens the right
 settings page. macOS sometimes applies a new grant only after a restart of the app; the guide has
 a Relaunch button for that. Recent macOS versions also ask now and then to confirm that apps may
@@ -82,10 +82,10 @@ keep recording the screen. That prompt comes from the system.
 
 | Module | What it does |
 | --- | --- |
-| `SnapkitCore` | Capture model, coordinate conversion, settings, file names, PNG export, clipboard, window shadow |
-| `SnapkitCapture` | ScreenCaptureKit wrappers: display and window capture, window list, permission |
-| `SnapkitAnnotate` | Annotation model with undo/redo, renderer shared by canvas and export, editor window |
-| `Snapkit` | The menu bar app: shortcuts, overlays, Quick Access, pins, settings, onboarding |
+| `SnapCore` | Capture model, coordinate conversion, settings, file names, PNG export, clipboard, window shadow |
+| `SnapCapture` | ScreenCaptureKit wrappers: display and window capture, window list, permission |
+| `SnapAnnotate` | Annotation model with undo/redo, renderer shared by canvas and export, editor window |
+| `Snap` | The menu bar app: shortcuts, overlays, Quick Access, pins, settings, onboarding |
 
 A capture goes through `CaptureCoordinator` (permission check, selection UI, ScreenCaptureKit)
 and comes out as a `Capture` value: pixels, pixels-per-point scale, and where it was on screen.

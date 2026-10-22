@@ -2,34 +2,34 @@
 import PackageDescription
 
 let package = Package(
-    name: "Snapkit",
+    name: "Snap",
     platforms: [.macOS(.v14)],
     products: [
-        .executable(name: "Snapkit", targets: ["Snapkit"]),
+        .executable(name: "Snap", targets: ["Snap"]),
     ],
     dependencies: [
         .package(url: "https://github.com/sindresorhus/KeyboardShortcuts", from: "2.0.0"),
     ],
     targets: [
         // Pure logic: models, geometry, settings, file output. No windows.
-        .target(name: "SnapkitCore"),
+        .target(name: "SnapCore"),
         // ScreenCaptureKit wrappers and permission handling.
-        .target(name: "SnapkitCapture", dependencies: ["SnapkitCore"]),
+        .target(name: "SnapCapture", dependencies: ["SnapCore"]),
         // Annotation model, renderer and editor UI.
-        .target(name: "SnapkitAnnotate", dependencies: ["SnapkitCore"]),
+        .target(name: "SnapAnnotate", dependencies: ["SnapCore"]),
         // The menu bar app: wires capture, overlays and windows together.
         .executableTarget(
-            name: "Snapkit",
+            name: "Snap",
             dependencies: [
-                "SnapkitCore",
-                "SnapkitCapture",
-                "SnapkitAnnotate",
+                "SnapCore",
+                "SnapCapture",
+                "SnapAnnotate",
                 .product(name: "KeyboardShortcuts", package: "KeyboardShortcuts"),
             ]
         ),
-        .testTarget(name: "SnapkitCoreTests", dependencies: ["SnapkitCore"]),
-        .testTarget(name: "SnapkitAnnotateTests", dependencies: ["SnapkitAnnotate"]),
-        // Takes real screenshots; skipped unless SNAPKIT_INTEGRATION=1 (needs Screen Recording access).
-        .testTarget(name: "SnapkitCaptureTests", dependencies: ["SnapkitCapture"]),
+        .testTarget(name: "SnapCoreTests", dependencies: ["SnapCore"]),
+        .testTarget(name: "SnapAnnotateTests", dependencies: ["SnapAnnotate"]),
+        // Takes real screenshots; skipped unless SNAP_INTEGRATION=1 (needs Screen Recording access).
+        .testTarget(name: "SnapCaptureTests", dependencies: ["SnapCapture"]),
     ]
 )

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds the Swift package and assembles a signed Snapkit.app.
+# Builds the Swift package and assembles a signed Snap.app.
 #
 # Usage: scripts/bundle.sh [debug|release]
 #
@@ -12,7 +12,7 @@ set -euo pipefail
 CONFIG="${1:-debug}"
 SIGN_IDENTITY="${SIGN_IDENTITY:--}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-APP="$ROOT/build/Snapkit.app"
+APP="$ROOT/build/Snap.app"
 
 cd "$ROOT"
 # See Makefile: the #Preview macro plugin used by KeyboardShortcuts only ships with Xcode.
@@ -24,13 +24,13 @@ case "$CONFIG" in
     release) XC_CONFIG=Release ;;
     *) XC_CONFIG=Debug ;;
 esac
-xcodebuild -scheme Snapkit -configuration "$XC_CONFIG" -destination 'generic/platform=macOS' \
+xcodebuild -scheme Snap -configuration "$XC_CONFIG" -destination 'generic/platform=macOS' \
     -derivedDataPath "$ROOT/build/DerivedData" -quiet build
 BIN_DIR="$ROOT/build/DerivedData/Build/Products/$XC_CONFIG"
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BIN_DIR/Snapkit" "$APP/Contents/MacOS/Snapkit"
+cp "$BIN_DIR/Snap" "$APP/Contents/MacOS/Snap"
 cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
 
 # SwiftPM resource bundles (e.g. KeyboardShortcuts localizations).
@@ -40,7 +40,7 @@ for bundle in "$BIN_DIR"/*.bundle; do
 done
 
 codesign --force --options runtime --timestamp=none \
-    --entitlements "$ROOT/Resources/Snapkit.entitlements" \
+    --entitlements "$ROOT/Resources/Snap.entitlements" \
     --sign "$SIGN_IDENTITY" "$APP"
 
 echo "Built $APP (signed with: $SIGN_IDENTITY)"

@@ -5,15 +5,15 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleExecutable</key>
-	<string>Snapkit</string>
+	<string>Snap</string>
 	<key>CFBundleIdentifier</key>
-	<string>dev.snapkit.Snapkit</string>
+	<string>io.github.szupzj18.Snap</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Snapkit</string>
+	<string>Snap</string>
 	<key>CFBundleDisplayName</key>
-	<string>Snapkit</string>
+	<string>Snap</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

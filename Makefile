@@ -6,7 +6,7 @@ export SIGN_IDENTITY
 unexport SDKROOT
 
 CONFIG ?= debug
-APP := build/Snapkit.app
+APP := build/Snap.app
 
 .PHONY: build app run test clean
 
@@ -17,7 +17,7 @@ app:
 	scripts/bundle.sh $(CONFIG)
 
 run: app
-	-pkill -x Snapkit
+	-pkill -x Snap
 	open $(APP)
 
 test:
