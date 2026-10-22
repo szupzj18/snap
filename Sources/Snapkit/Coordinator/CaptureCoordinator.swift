@@ -42,7 +42,11 @@ final class CaptureCoordinator {
         switch mode {
         case .fullscreen:
             return try await captureFullscreen()
-        case .area, .window:
+        case .area:
+            // Freeze first, then select: what the user sees is exactly what gets cropped.
+            let snapshots = try await service.captureAllDisplays()
+            return await AreaSelectionSession().run(snapshots: snapshots)
+        case .window:
             return nil
         }
     }

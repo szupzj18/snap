@@ -27,7 +27,7 @@ final class StatusItemController: NSObject {
             let item = NSMenuItem(title: "Capture \(mode.title)", action: #selector(captureFromMenu(_:)), keyEquivalent: "")
             item.target = self
             item.representedObject = mode.rawValue
-            item.isEnabled = mode == .fullscreen
+            item.isEnabled = mode != .window
             item.setShortcut(for: mode.shortcutName)
             menu.addItem(item)
         }
