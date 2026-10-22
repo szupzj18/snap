@@ -21,6 +21,7 @@ struct QuickAccessCardView: View {
                     HStack {
                         CornerButton(systemImage: "xmark", help: "Close", action: handlers.close)
                         Spacer()
+                        CornerButton(systemImage: "pin.fill", help: "Pin to screen", action: handlers.pin)
                     }
                     Spacer()
                 }

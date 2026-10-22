@@ -7,11 +7,13 @@ final class PostCaptureRouter {
     private let settings: AppSettings
     private let actions: CaptureActions
     private let quickAccess: QuickAccessController
+    private let pins: PinController
 
-    init(settings: AppSettings, actions: CaptureActions, quickAccess: QuickAccessController) {
+    init(settings: AppSettings, actions: CaptureActions, quickAccess: QuickAccessController, pins: PinController) {
         self.settings = settings
         self.actions = actions
         self.quickAccess = quickAccess
+        self.pins = pins
     }
 
     func handle(_ capture: Capture) {
@@ -26,6 +28,9 @@ final class PostCaptureRouter {
             }
         } catch {
             ErrorPresenter.present(error)
+        }
+        if enabled.contains(.pin) {
+            pins.pin(capture)
         }
         if enabled.contains(.showQuickAccess) {
             quickAccess.show(capture, savedURL: savedURL)

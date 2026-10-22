@@ -21,13 +21,15 @@ final class QuickAccessItem: ObservableObject {
 final class QuickAccessController {
     private let settings: AppSettings
     private let actions: CaptureActions
+    private let pins: PinController
     /// Oldest first.
     private var cards: [QuickAccessCard] = []
     private let maximumCards = 5
 
-    init(settings: AppSettings, actions: CaptureActions) {
+    init(settings: AppSettings, actions: CaptureActions, pins: PinController) {
         self.settings = settings
         self.actions = actions
+        self.pins = pins
     }
 
     func show(_ capture: Capture, savedURL: URL?) {
@@ -56,6 +58,11 @@ final class QuickAccessController {
                 } else {
                     self.perform { item.savedURL = try self.actions.save(item.capture) }
                 }
+                self.close(item)
+            },
+            pin: { [weak self, weak item] in
+                guard let self, let item else { return }
+                self.pins.pin(item.capture)
                 self.close(item)
             },
             close: { [weak self, weak item] in
@@ -112,6 +119,7 @@ final class QuickAccessController {
 struct QuickAccessHandlers {
     let copy: () -> Void
     let save: () -> Void
+    let pin: () -> Void
     let close: () -> Void
     let fileForDrag: () -> URL?
     let dragEnded: () -> Void

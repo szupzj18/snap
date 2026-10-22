@@ -8,8 +8,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let onboarding = PermissionOnboardingController()
     private let settingsWindow = SettingsWindowController()
     private lazy var actions = CaptureActions(settings: settings)
-    private lazy var quickAccess = QuickAccessController(settings: settings, actions: actions)
-    private lazy var router = PostCaptureRouter(settings: settings, actions: actions, quickAccess: quickAccess)
+    private lazy var pins = PinController(actions: actions)
+    private lazy var quickAccess = QuickAccessController(settings: settings, actions: actions, pins: pins)
+    private lazy var router = PostCaptureRouter(settings: settings, actions: actions, quickAccess: quickAccess, pins: pins)
     private lazy var coordinator = CaptureCoordinator(settings: settings, onboarding: onboarding, router: router)
     private var statusItemController: StatusItemController?
 
