@@ -3,6 +3,7 @@ import Foundation
 
 /// Things that can happen automatically right after a capture. Several can be on at once.
 public enum AfterCaptureAction: String, CaseIterable, Identifiable {
+    case showQuickAccess
     case save
     case copyToClipboard
 
@@ -10,6 +11,7 @@ public enum AfterCaptureAction: String, CaseIterable, Identifiable {
 
     public var title: String {
         switch self {
+        case .showQuickAccess: "Show Quick Access preview"
         case .save: "Save to folder"
         case .copyToClipboard: "Copy to clipboard"
         }
@@ -25,6 +27,7 @@ public final class AppSettings: ObservableObject {
         static let filenameTemplate = "filenameTemplate"
         static let afterCapture = "afterCapture"
         static let windowShadow = "windowShadow"
+        static let quickAccessAutoClose = "quickAccessAutoClose"
     }
 
     private let defaults: UserDefaults
@@ -46,8 +49,13 @@ public final class AppSettings: ObservableObject {
         didSet { defaults.set(windowShadow, forKey: Key.windowShadow) }
     }
 
+    /// Seconds before an untouched Quick Access preview closes itself; 0 keeps it open.
+    @Published public var quickAccessAutoClose: TimeInterval {
+        didSet { defaults.set(quickAccessAutoClose, forKey: Key.quickAccessAutoClose) }
+    }
+
     public static let defaultSaveDirectory = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask)[0]
-    public static let defaultAfterCapture: Set<AfterCaptureAction> = [.save]
+    public static let defaultAfterCapture: Set<AfterCaptureAction> = [.showQuickAccess, .save]
 
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -58,6 +66,7 @@ public final class AppSettings: ObservableObject {
             .map { Set($0.compactMap(AfterCaptureAction.init(rawValue:))) }
             ?? Self.defaultAfterCapture
         windowShadow = defaults.object(forKey: Key.windowShadow) as? Bool ?? true
+        quickAccessAutoClose = defaults.object(forKey: Key.quickAccessAutoClose) as? TimeInterval ?? 5
     }
 
     public func filename(for capture: Capture) -> String {

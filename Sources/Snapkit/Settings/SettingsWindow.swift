@@ -60,6 +60,13 @@ private struct GeneralSettingsView: View {
                 ForEach(AfterCaptureAction.allCases) { action in
                     Toggle(action.title, isOn: binding(for: action))
                 }
+                Picker("Close Quick Access after", selection: $settings.quickAccessAutoClose) {
+                    Text("Never").tag(TimeInterval(0))
+                    ForEach([3, 5, 10, 20], id: \.self) { seconds in
+                        Text("\(seconds) seconds").tag(TimeInterval(seconds))
+                    }
+                }
+                .disabled(!settings.afterCapture.contains(.showQuickAccess))
             }
 
             Section("Window capture") {

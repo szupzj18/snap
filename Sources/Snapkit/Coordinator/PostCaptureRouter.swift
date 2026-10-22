@@ -5,32 +5,30 @@ import SnapkitCore
 @MainActor
 final class PostCaptureRouter {
     private let settings: AppSettings
+    private let actions: CaptureActions
+    private let quickAccess: QuickAccessController
 
-    init(settings: AppSettings) {
+    init(settings: AppSettings, actions: CaptureActions, quickAccess: QuickAccessController) {
         self.settings = settings
+        self.actions = actions
+        self.quickAccess = quickAccess
     }
 
     func handle(_ capture: Capture) {
+        let enabled = settings.afterCapture
+        var savedURL: URL?
         do {
-            let actions = settings.afterCapture
-            if actions.contains(.copyToClipboard) {
-                try Clipboard.copy(capture.image, scale: capture.scale)
+            if enabled.contains(.save) {
+                savedURL = try actions.save(capture)
             }
-            if actions.contains(.save) {
-                try save(capture)
+            if enabled.contains(.copyToClipboard) {
+                try actions.copy(capture)
             }
         } catch {
             ErrorPresenter.present(error)
         }
-    }
-
-    @discardableResult
-    func save(_ capture: Capture) throws -> URL {
-        try ImageExporter.writePNG(
-            capture.image,
-            scale: capture.scale,
-            to: settings.saveDirectory,
-            filename: settings.filename(for: capture)
-        )
+        if enabled.contains(.showQuickAccess) {
+            quickAccess.show(capture, savedURL: savedURL)
+        }
     }
 }
