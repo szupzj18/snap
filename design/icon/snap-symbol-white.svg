@@ -1,0 +1,9 @@
+<svg fill="#ffffff" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><title>Snap</title>
+  
+  <!-- Freeze frame. Selection block whose dragged corner (184,176) is the centre of an open
+       crosshair. Arms 22 thick, 40 long, 14 from centre; 14-unit gap between block and arms. -->
+  <g transform="translate(-11 -17)">
+    <path d="M40 56H184V108H159V151H116V176H40Z"/>
+    <path d="M130 165H170V187H130ZM198 165H238V187H198ZM173 122H195V162H173ZM173 190H195V230H173Z"/>
+  </g>
+</svg>

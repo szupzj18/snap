@@ -14,8 +14,7 @@ final class StatusItemController: NSObject {
         self.settingsWindow = settingsWindow
         super.init()
         if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "camera.viewfinder", accessibilityDescription: "Snap")
-            button.image?.isTemplate = true
+            button.image = MenuBarIcon.make()
         }
         statusItem.menu = makeMenu()
     }

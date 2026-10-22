@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Crop-S: two crop corners interlocking along a 45° seam in the middle bar. Stroke unit 36. -->
+  <path d="M52 40H204V76H88V110H138L102 146H52Z"/>
+  <path d="M152 110H204V216H52V180H168V146H116Z"/>
+</svg>

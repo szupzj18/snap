@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <title>Snap (small sizes)</title>
+  <!-- 16–32 px cut: arms 28 thick, 40 long, 18 from centre; 20-unit gap to the block. -->
+  <g transform="translate(-9 -15)">
+    <path d="M36 56H180V94H146V138H102V172H36Z"/>
+    <path d="M122 158H162V186H122ZM198 158H238V186H198ZM166 114H194V154H166ZM166 190H194V230H166Z"/>
+  </g>
+</svg>

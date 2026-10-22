@@ -28,9 +28,9 @@ struct PermissionOnboardingView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(spacing: 14) {
-                Image(systemName: "camera.viewfinder")
-                    .font(.system(size: 40))
-                    .foregroundStyle(.tint)
+                Image(nsImage: NSApp.applicationIconImage)
+                    .resizable()
+                    .frame(width: 64, height: 64)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Allow Screen Recording").font(.title2.bold())
                     Text("Snap needs it to take screenshots.").foregroundStyle(.secondary)

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Selection block; an open-centre crosshair sits on its dragged corner, 12-unit gaps throughout. -->
+  <g transform="translate(-6 -10)">
+    <path d="M40 56H184V120H164V156H128V176H40Z"/>
+    <path d="M140 168H172V184H140ZM196 168H228V184H196ZM176 132H192V164H176ZM176 188H192V220H176Z"/>
+  </g>
+</svg>

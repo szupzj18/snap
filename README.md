@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="design/icon/web/icon-512.png" width="128" alt="Snap icon">
+</p>
+
 # Snap
 
 An open-source screenshot tool for macOS, in the spirit of CleanShot X.
@@ -104,6 +108,10 @@ Planned for after the MVP, with the extension points already in place:
 - Screen recording and GIF export: an SCStream-based service beside `ScreenshotService`.
 - Capture history: a consumer of `PostCaptureRouter` that stores each capture.
 - Upload and sharing.
+
+## Icon
+
+The app icon, menu bar glyph, colours and usage rules live in [`design/icon`](design/icon/README.md).
 
 ## License
 

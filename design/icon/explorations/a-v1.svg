@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Crop-S: ┌ corner + middle bar + ┘ corner, stroke unit 40 -->
+  <path d="M48 40H208V80H88V108H208V216H48V176H168V148H48Z"/>
+</svg>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Snap corner: the dragged corner of a selection, with a three-stroke click at 15/45/75°. -->
+  <g transform="translate(-12 -12)">
+    <path d="M140 48H176V176H48V140H140Z"/>
+    <g stroke="#000" stroke-width="16" stroke-linecap="round">
+      <path d="M199.2 182.2L230.1 190.5M193 193L215.6 215.6M182.2 199.2L190.5 230.1"/>
+    </g>
+  </g>
+</svg>

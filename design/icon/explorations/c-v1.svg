@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Selection block whose dragged corner carries the crosshair, knocked out by a gap -->
+  <path fill-rule="evenodd" d="M40 56H176V136H160V152H136V192H40Z"/>
+  <path d="M164 140H180V172H212V188H180V220H164V188H132V172H164Z"/>
+</svg>

@@ -32,6 +32,21 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/Snap" "$APP/Contents/MacOS/Snap"
 cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
+cp "$ROOT/Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
+
+# macOS 26 draws app icons from an Icon Composer document compiled into Assets.car, and frames
+# old-style .icns icons in a grey tile. Older actool versions can't compile .icon; the app then
+# falls back to AppIcon.icns, which is also what macOS 14 and 15 use.
+ICON_TMP="$(mktemp -d)"
+if xcrun actool "$ROOT/Resources/AppIcon.icon" --compile "$ICON_TMP" --platform macosx \
+    --minimum-deployment-target 14.0 --app-icon AppIcon \
+    --output-partial-info-plist "$ICON_TMP/partial.plist" >/dev/null 2>&1 \
+    && [ -f "$ICON_TMP/Assets.car" ]; then
+    cp "$ICON_TMP/Assets.car" "$APP/Contents/Resources/Assets.car"
+else
+    echo "warning: actool couldn't compile AppIcon.icon (needs Xcode 26); using AppIcon.icns only" >&2
+fi
+rm -rf "$ICON_TMP"
 
 # SwiftPM resource bundles (e.g. KeyboardShortcuts localizations).
 for bundle in "$BIN_DIR"/*.bundle; do
