@@ -2,12 +2,14 @@ import XCTest
 @testable import SnapCore
 
 final class AppSettingsTests: XCTestCase {
-    private var suiteName: String!
+    // A fixed name: macOS keeps an (empty) plist per suite even after it is cleared,
+    // so a fresh name per run would leave a new file in ~/Library/Preferences each time.
+    private let suiteName = "SnapTests"
     private var defaults: UserDefaults!
 
     override func setUp() {
-        suiteName = "SnapTests-\(UUID().uuidString)"
         defaults = UserDefaults(suiteName: suiteName)
+        defaults.removePersistentDomain(forName: suiteName)
     }
 
     override func tearDown() {
