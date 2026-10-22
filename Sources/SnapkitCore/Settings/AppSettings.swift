@@ -24,6 +24,7 @@ public final class AppSettings: ObservableObject {
         static let saveDirectory = "saveDirectory"
         static let filenameTemplate = "filenameTemplate"
         static let afterCapture = "afterCapture"
+        static let windowShadow = "windowShadow"
     }
 
     private let defaults: UserDefaults
@@ -40,6 +41,11 @@ public final class AppSettings: ObservableObject {
         didSet { defaults.set(afterCapture.map(\.rawValue).sorted(), forKey: Key.afterCapture) }
     }
 
+    /// Whether window captures get a drop shadow.
+    @Published public var windowShadow: Bool {
+        didSet { defaults.set(windowShadow, forKey: Key.windowShadow) }
+    }
+
     public static let defaultSaveDirectory = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask)[0]
     public static let defaultAfterCapture: Set<AfterCaptureAction> = [.save]
 
@@ -51,6 +57,7 @@ public final class AppSettings: ObservableObject {
         afterCapture = defaults.stringArray(forKey: Key.afterCapture)
             .map { Set($0.compactMap(AfterCaptureAction.init(rawValue:))) }
             ?? Self.defaultAfterCapture
+        windowShadow = defaults.object(forKey: Key.windowShadow) as? Bool ?? true
     }
 
     public func filename(for capture: Capture) -> String {

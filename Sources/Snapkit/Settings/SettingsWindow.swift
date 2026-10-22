@@ -62,6 +62,10 @@ private struct GeneralSettingsView: View {
                 }
             }
 
+            Section("Window capture") {
+                Toggle("Add shadow", isOn: $settings.windowShadow)
+            }
+
             Section("Permissions") {
                 LabeledContent("Screen Recording") {
                     if hasPermission {

@@ -26,7 +26,7 @@ public struct DisplaySnapshot {
 
 /// Takes still screenshots with ScreenCaptureKit.
 public final class ScreenshotService {
-    private let ownBundleIdentifier: String?
+    let ownBundleIdentifier: String?
 
     public init(ownBundleIdentifier: String? = Bundle.main.bundleIdentifier) {
         self.ownBundleIdentifier = ownBundleIdentifier

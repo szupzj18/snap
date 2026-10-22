@@ -7,7 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let onboarding = PermissionOnboardingController()
     private let settingsWindow = SettingsWindowController()
     private lazy var router = PostCaptureRouter(settings: .shared)
-    private lazy var coordinator = CaptureCoordinator(onboarding: onboarding, router: router)
+    private lazy var coordinator = CaptureCoordinator(settings: .shared, onboarding: onboarding, router: router)
     private var statusItemController: StatusItemController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {

@@ -7,11 +7,13 @@ import SnapkitCore
 @MainActor
 final class CaptureCoordinator {
     private let service = ScreenshotService()
+    private let settings: AppSettings
     private let onboarding: PermissionOnboardingController
     private let router: PostCaptureRouter
     private var isCapturing = false
 
-    init(onboarding: PermissionOnboardingController, router: PostCaptureRouter) {
+    init(settings: AppSettings, onboarding: PermissionOnboardingController, router: PostCaptureRouter) {
+        self.settings = settings
         self.onboarding = onboarding
         self.router = router
     }
@@ -47,8 +49,25 @@ final class CaptureCoordinator {
             let snapshots = try await service.captureAllDisplays()
             return await AreaSelectionSession().run(snapshots: snapshots)
         case .window:
-            return nil
+            return try await captureWindow()
         }
+    }
+
+    private func captureWindow() async throws -> Capture? {
+        let windows = try await service.pickableWindows()
+        guard let window = await WindowPickerSession().run(windows: windows) else { return nil }
+        let (image, scale) = try await service.captureWindow(window)
+        let final = settings.windowShadow ? WindowShadow.apply(to: image, scale: scale) ?? image : image
+        let center = ScreenGeometry.flip(CGPoint(x: window.frame.midX, y: window.frame.midY), primaryScreenHeight: NSScreen.primaryHeight)
+        let screen = NSScreen.screens.first { NSMouseInRect(center, $0.frame, false) }
+        return Capture(
+            image: final,
+            scale: scale,
+            mode: .window,
+            sourceRect: window.frame,
+            displayID: screen?.displayID,
+            appName: window.appName
+        )
     }
 
     /// Captures the display under the mouse pointer.

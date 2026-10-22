@@ -19,6 +19,7 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertEqual(settings.saveDirectory, AppSettings.defaultSaveDirectory)
         XCTAssertEqual(settings.filenameTemplate, FilenameFormatter.defaultTemplate)
         XCTAssertEqual(settings.afterCapture, AppSettings.defaultAfterCapture)
+        XCTAssertTrue(settings.windowShadow)
     }
 
     func testValuesPersist() {
@@ -26,11 +27,13 @@ final class AppSettingsTests: XCTestCase {
         settings.saveDirectory = URL(fileURLWithPath: "/tmp/shots", isDirectory: true)
         settings.filenameTemplate = "{mode} {time}"
         settings.afterCapture = [.copyToClipboard]
+        settings.windowShadow = false
 
         let reloaded = AppSettings(defaults: defaults)
         XCTAssertEqual(reloaded.saveDirectory.path, "/tmp/shots")
         XCTAssertEqual(reloaded.filenameTemplate, "{mode} {time}")
         XCTAssertEqual(reloaded.afterCapture, [.copyToClipboard])
+        XCTAssertFalse(reloaded.windowShadow)
     }
 
     func testEmptyActionSetIsKept() {
