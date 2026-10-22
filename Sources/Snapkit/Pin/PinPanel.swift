@@ -12,12 +12,10 @@ final class PinPanel: NSPanel {
 
     private let imageSize: CGSize
     private let pinView: PinView
-    private var zoom: CGFloat
     private let hud = PinHUD()
 
     init(capture: Capture, frame: CGRect) {
         imageSize = capture.pointSize
-        zoom = frame.width / capture.pointSize.width
         pinView = PinView(image: capture.image)
         super.init(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel, .resizable], backing: .buffered, defer: false)
         level = .floating
@@ -43,10 +41,13 @@ final class PinPanel: NSPanel {
 
     // MARK: Zoom and opacity
 
+    /// Derived from the frame, since the user can also resize the window by its edges.
+    private var zoom: CGFloat { frame.width / imageSize.width }
+
     func setZoom(_ newZoom: CGFloat) {
         guard let screen = screen ?? NSScreen.main else { return }
         let maxZoom = min(screen.visibleFrame.width / imageSize.width, screen.visibleFrame.height / imageSize.height, 4)
-        zoom = min(max(newZoom, 40 / imageSize.width), max(maxZoom, 1))
+        let zoom = min(max(newZoom, 40 / imageSize.width), max(maxZoom, 1))
         let size = CGSize(width: imageSize.width * zoom, height: imageSize.height * zoom)
         // Grow and shrink around the center.
         let center = CGPoint(x: frame.midX, y: frame.midY)
