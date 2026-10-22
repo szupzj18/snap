@@ -8,12 +8,14 @@ final class PostCaptureRouter {
     private let actions: CaptureActions
     private let quickAccess: QuickAccessController
     private let pins: PinController
+    private let editors: EditorPresenter
 
-    init(settings: AppSettings, actions: CaptureActions, quickAccess: QuickAccessController, pins: PinController) {
+    init(settings: AppSettings, actions: CaptureActions, quickAccess: QuickAccessController, pins: PinController, editors: EditorPresenter) {
         self.settings = settings
         self.actions = actions
         self.quickAccess = quickAccess
         self.pins = pins
+        self.editors = editors
     }
 
     func handle(_ capture: Capture) {
@@ -28,6 +30,9 @@ final class PostCaptureRouter {
             }
         } catch {
             ErrorPresenter.present(error)
+        }
+        if enabled.contains(.openEditor) {
+            editors.edit(capture)
         }
         if enabled.contains(.pin) {
             pins.pin(capture)

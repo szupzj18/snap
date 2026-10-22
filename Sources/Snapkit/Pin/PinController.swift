@@ -5,10 +5,12 @@ import SnapkitCore
 @MainActor
 final class PinController {
     private let actions: CaptureActions
+    private let editors: EditorPresenter
     private var pins: [PinPanel] = []
 
-    init(actions: CaptureActions) {
+    init(actions: CaptureActions, editors: EditorPresenter) {
         self.actions = actions
+        self.editors = editors
     }
 
     func pin(_ capture: Capture) {
@@ -19,6 +21,7 @@ final class PinController {
                 if let url = try self?.actions.save(capture) { self?.actions.revealInFinder(url) }
             }
         }
+        panel.onEdit = { [weak self] in self?.editors.edit(capture) }
         panel.onClose = { [weak self, weak panel] in
             guard let panel else { return }
             panel.orderOut(nil)

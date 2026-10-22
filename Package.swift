@@ -15,16 +15,20 @@ let package = Package(
         .target(name: "SnapkitCore"),
         // ScreenCaptureKit wrappers and permission handling.
         .target(name: "SnapkitCapture", dependencies: ["SnapkitCore"]),
+        // Annotation model, renderer and editor UI.
+        .target(name: "SnapkitAnnotate", dependencies: ["SnapkitCore"]),
         // The menu bar app: wires capture, overlays and windows together.
         .executableTarget(
             name: "Snapkit",
             dependencies: [
                 "SnapkitCore",
                 "SnapkitCapture",
+                "SnapkitAnnotate",
                 .product(name: "KeyboardShortcuts", package: "KeyboardShortcuts"),
             ]
         ),
         .testTarget(name: "SnapkitCoreTests", dependencies: ["SnapkitCore"]),
+        .testTarget(name: "SnapkitAnnotateTests", dependencies: ["SnapkitAnnotate"]),
         // Takes real screenshots; skipped unless SNAPKIT_INTEGRATION=1 (needs Screen Recording access).
         .testTarget(name: "SnapkitCaptureTests", dependencies: ["SnapkitCapture"]),
     ]

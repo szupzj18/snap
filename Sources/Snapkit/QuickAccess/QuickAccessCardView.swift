@@ -24,6 +24,10 @@ struct QuickAccessCardView: View {
                         CornerButton(systemImage: "pin.fill", help: "Pin to screen", action: handlers.pin)
                     }
                     Spacer()
+                    HStack {
+                        CornerButton(systemImage: "pencil", help: "Annotate", action: handlers.edit)
+                        Spacer()
+                    }
                 }
                 .padding(6)
             }
@@ -84,6 +88,7 @@ private struct DragSource: NSViewRepresentable {
         view.onHover = { [weak item] in item?.isHovered = $0 }
         view.fileForDrag = handlers.fileForDrag
         view.onDragEnded = handlers.dragEnded
+        view.onClick = handlers.edit
         return view
     }
 
@@ -94,6 +99,7 @@ final class DragSourceView: NSView, NSDraggingSource {
     var onHover: ((Bool) -> Void)?
     var fileForDrag: (() -> URL?)?
     var onDragEnded: (() -> Void)?
+    var onClick: (() -> Void)?
 
     private let image: CGImage
     private var mouseDownEvent: NSEvent?
@@ -143,6 +149,10 @@ final class DragSourceView: NSView, NSDraggingSource {
     }
 
     override func mouseUp(with event: NSEvent) {
+        // Still set means the mouse never moved far enough to start a drag: a plain click.
+        if mouseDownEvent != nil {
+            onClick?()
+        }
         mouseDownEvent = nil
     }
 

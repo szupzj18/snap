@@ -6,6 +6,7 @@ public enum AfterCaptureAction: String, CaseIterable, Identifiable {
     case showQuickAccess
     case save
     case copyToClipboard
+    case openEditor
     case pin
 
     public var id: String { rawValue }
@@ -15,6 +16,7 @@ public enum AfterCaptureAction: String, CaseIterable, Identifiable {
         case .showQuickAccess: "Show Quick Access preview"
         case .save: "Save to folder"
         case .copyToClipboard: "Copy to clipboard"
+        case .openEditor: "Open in editor"
         case .pin: "Pin to screen"
         }
     }

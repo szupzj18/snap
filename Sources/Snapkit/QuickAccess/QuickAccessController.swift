@@ -22,14 +22,16 @@ final class QuickAccessController {
     private let settings: AppSettings
     private let actions: CaptureActions
     private let pins: PinController
+    private let editors: EditorPresenter
     /// Oldest first.
     private var cards: [QuickAccessCard] = []
     private let maximumCards = 5
 
-    init(settings: AppSettings, actions: CaptureActions, pins: PinController) {
+    init(settings: AppSettings, actions: CaptureActions, pins: PinController, editors: EditorPresenter) {
         self.settings = settings
         self.actions = actions
         self.pins = pins
+        self.editors = editors
     }
 
     func show(_ capture: Capture, savedURL: URL?) {
@@ -58,6 +60,11 @@ final class QuickAccessController {
                 } else {
                     self.perform { item.savedURL = try self.actions.save(item.capture) }
                 }
+                self.close(item)
+            },
+            edit: { [weak self, weak item] in
+                guard let self, let item else { return }
+                self.editors.edit(item.capture)
                 self.close(item)
             },
             pin: { [weak self, weak item] in
@@ -119,6 +126,7 @@ final class QuickAccessController {
 struct QuickAccessHandlers {
     let copy: () -> Void
     let save: () -> Void
+    let edit: () -> Void
     let pin: () -> Void
     let close: () -> Void
     let fileForDrag: () -> URL?
