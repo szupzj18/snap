@@ -32,6 +32,8 @@ public final class AppSettings: ObservableObject {
         static let afterCapture = "afterCapture"
         static let windowShadow = "windowShadow"
         static let quickAccessAutoClose = "quickAccessAutoClose"
+        static let historyEnabled = "historyEnabled"
+        static let historyLimit = "historyLimit"
     }
 
     private let defaults: UserDefaults
@@ -58,6 +60,16 @@ public final class AppSettings: ObservableObject {
         didSet { defaults.set(quickAccessAutoClose, forKey: Key.quickAccessAutoClose) }
     }
 
+    /// Whether every capture is also kept in the history.
+    @Published public var historyEnabled: Bool {
+        didSet { defaults.set(historyEnabled, forKey: Key.historyEnabled) }
+    }
+
+    /// How many captures the history keeps.
+    @Published public var historyLimit: Int {
+        didSet { defaults.set(historyLimit, forKey: Key.historyLimit) }
+    }
+
     public static let defaultSaveDirectory = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask)[0]
     public static let defaultAfterCapture: Set<AfterCaptureAction> = [.showQuickAccess, .save]
 
@@ -71,6 +83,8 @@ public final class AppSettings: ObservableObject {
             ?? Self.defaultAfterCapture
         windowShadow = defaults.object(forKey: Key.windowShadow) as? Bool ?? true
         quickAccessAutoClose = defaults.object(forKey: Key.quickAccessAutoClose) as? TimeInterval ?? 5
+        historyEnabled = defaults.object(forKey: Key.historyEnabled) as? Bool ?? true
+        historyLimit = defaults.object(forKey: Key.historyLimit) as? Int ?? 50
     }
 
     public func filename(for capture: Capture) -> String {

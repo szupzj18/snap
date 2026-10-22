@@ -9,16 +9,30 @@ final class PostCaptureRouter {
     private let quickAccess: QuickAccessController
     private let pins: PinController
     private let editors: EditorPresenter
+    private let history: CaptureHistory
 
-    init(settings: AppSettings, actions: CaptureActions, quickAccess: QuickAccessController, pins: PinController, editors: EditorPresenter) {
+    init(
+        settings: AppSettings,
+        actions: CaptureActions,
+        quickAccess: QuickAccessController,
+        pins: PinController,
+        editors: EditorPresenter,
+        history: CaptureHistory
+    ) {
         self.settings = settings
         self.actions = actions
         self.quickAccess = quickAccess
         self.pins = pins
         self.editors = editors
+        self.history = history
     }
 
     func handle(_ capture: Capture) {
+        if settings.historyEnabled {
+            Task { [history] in
+                do { try await history.add(capture) } catch { NSLog("Snap: couldn't add capture to history: \(error)") }
+            }
+        }
         let enabled = settings.afterCapture
         var savedURL: URL?
         do {

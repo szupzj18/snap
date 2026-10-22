@@ -23,6 +23,8 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertEqual(settings.afterCapture, AppSettings.defaultAfterCapture)
         XCTAssertTrue(settings.windowShadow)
         XCTAssertEqual(settings.quickAccessAutoClose, 5)
+        XCTAssertTrue(settings.historyEnabled)
+        XCTAssertEqual(settings.historyLimit, 50)
     }
 
     func testValuesPersist() {
@@ -32,6 +34,8 @@ final class AppSettingsTests: XCTestCase {
         settings.afterCapture = [.copyToClipboard]
         settings.windowShadow = false
         settings.quickAccessAutoClose = 0
+        settings.historyEnabled = false
+        settings.historyLimit = 200
 
         let reloaded = AppSettings(defaults: defaults)
         XCTAssertEqual(reloaded.saveDirectory.path, "/tmp/shots")
@@ -39,6 +43,8 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertEqual(reloaded.afterCapture, [.copyToClipboard])
         XCTAssertFalse(reloaded.windowShadow)
         XCTAssertEqual(reloaded.quickAccessAutoClose, 0)
+        XCTAssertFalse(reloaded.historyEnabled)
+        XCTAssertEqual(reloaded.historyLimit, 200)
     }
 
     func testEmptyActionSetIsKept() {

@@ -69,6 +69,14 @@ private struct GeneralSettingsView: View {
                 .disabled(!settings.afterCapture.contains(.showQuickAccess))
             }
 
+            Section("History") {
+                Toggle("Keep a history of captures", isOn: $settings.historyEnabled)
+                Picker("Keep the last", selection: $settings.historyLimit) {
+                    ForEach([20, 50, 100, 200], id: \.self) { Text("\($0) captures").tag($0) }
+                }
+                .disabled(!settings.historyEnabled)
+            }
+
             Section("Window capture") {
                 Toggle("Add shadow", isOn: $settings.windowShadow)
             }

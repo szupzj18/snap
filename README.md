@@ -26,6 +26,8 @@ Retina scaling.
   counters, with colors, three sizes, undo/redo, copy and PNG export at full resolution.
 - **Pins**: keep a capture floating above all windows. Drag to move, scroll or pinch to zoom,
   ⌥-scroll to change opacity, right-click for more.
+- **History**: the last 50 captures (configurable) are kept, so a closed preview is never lost.
+  Open History… from the menu bar to copy, annotate, pin, drag out or reveal any of them.
 - **Settings**: save folder, file name template, after-capture actions, shortcuts.
 
 ## Shortcuts
@@ -109,7 +111,6 @@ Planned for after the MVP, with the extension points already in place:
 
 - Scrolling capture: a new `CaptureMode`, reusing area selection.
 - Screen recording and GIF export: an SCStream-based service beside `ScreenshotService`.
-- Capture history: a consumer of `PostCaptureRouter` that stores each capture.
 - Upload and sharing.
 
 ## Icon

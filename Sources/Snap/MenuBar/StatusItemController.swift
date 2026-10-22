@@ -8,10 +8,12 @@ final class StatusItemController: NSObject {
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private let coordinator: CaptureCoordinator
     private let settingsWindow: SettingsWindowController
+    private let historyWindow: HistoryWindowController
 
-    init(coordinator: CaptureCoordinator, settingsWindow: SettingsWindowController) {
+    init(coordinator: CaptureCoordinator, settingsWindow: SettingsWindowController, historyWindow: HistoryWindowController) {
         self.coordinator = coordinator
         self.settingsWindow = settingsWindow
+        self.historyWindow = historyWindow
         super.init()
         if let button = statusItem.button {
             button.image = MenuBarIcon.make()
@@ -30,12 +32,19 @@ final class StatusItemController: NSObject {
             menu.addItem(item)
         }
         menu.addItem(.separator())
+        let history = NSMenuItem(title: "History…", action: #selector(openHistory), keyEquivalent: "")
+        history.target = self
+        menu.addItem(history)
         let settings = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
         settings.target = self
         menu.addItem(settings)
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit Snap", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         return menu
+    }
+
+    @objc private func openHistory() {
+        historyWindow.show()
     }
 
     @objc private func openSettings() {
