@@ -24,6 +24,21 @@ final class CaptureActions {
         try Clipboard.copy(capture.image, scale: capture.scale)
     }
 
+    /// Recognizes the text in the capture and puts it on the clipboard, with a toast either way.
+    func copyText(from capture: Capture) async {
+        do {
+            let text = try await TextRecognizer.recognize(in: capture.image)
+            if text.isEmpty {
+                Toast.show("No text found", systemImage: "text.viewfinder")
+            } else {
+                Clipboard.copy(text)
+                Toast.show("Copied \(text.count) characters", systemImage: "doc.on.clipboard")
+            }
+        } catch {
+            ErrorPresenter.present(error)
+        }
+    }
+
     func revealInFinder(_ url: URL) {
         NSWorkspace.shared.activateFileViewerSelecting([url])
     }

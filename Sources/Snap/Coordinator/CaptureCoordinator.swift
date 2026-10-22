@@ -10,12 +10,14 @@ final class CaptureCoordinator {
     private let settings: AppSettings
     private let onboarding: PermissionOnboardingController
     private let router: PostCaptureRouter
+    private let actions: CaptureActions
     private var isCapturing = false
 
-    init(settings: AppSettings, onboarding: PermissionOnboardingController, router: PostCaptureRouter) {
+    init(settings: AppSettings, onboarding: PermissionOnboardingController, router: PostCaptureRouter, actions: CaptureActions) {
         self.settings = settings
         self.onboarding = onboarding
         self.router = router
+        self.actions = actions
     }
 
     func start(_ mode: CaptureMode) {
@@ -28,7 +30,10 @@ final class CaptureCoordinator {
         Task {
             defer { isCapturing = false }
             do {
-                if let capture = try await capture(mode) {
+                guard let capture = try await capture(mode) else { return }
+                if mode == .text {
+                    await actions.copyText(from: capture)
+                } else {
                     router.handle(capture)
                 }
             } catch CaptureError.permissionDenied {
@@ -44,10 +49,10 @@ final class CaptureCoordinator {
         switch mode {
         case .fullscreen:
             return try await captureFullscreen()
-        case .area:
+        case .area, .text:
             // Freeze first, then select: what the user sees is exactly what gets cropped.
             let snapshots = try await service.captureAllDisplays()
-            return await AreaSelectionSession().run(snapshots: snapshots)
+            return await AreaSelectionSession(mode: mode).run(snapshots: snapshots)
         case .window:
             return try await captureWindow()
         }

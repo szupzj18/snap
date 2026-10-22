@@ -67,6 +67,11 @@ final class QuickAccessController {
                 self.editors.edit(item.capture)
                 self.close(item)
             },
+            copyText: { [weak self, weak item] in
+                guard let self, let item else { return }
+                self.close(item)
+                Task { await self.actions.copyText(from: item.capture) }
+            },
             pin: { [weak self, weak item] in
                 guard let self, let item else { return }
                 self.pins.pin(item.capture)
@@ -127,6 +132,7 @@ struct QuickAccessHandlers {
     let copy: () -> Void
     let save: () -> Void
     let edit: () -> Void
+    let copyText: () -> Void
     let pin: () -> Void
     let close: () -> Void
     let fileForDrag: () -> URL?

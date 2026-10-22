@@ -8,7 +8,12 @@ import SnapCore
 @MainActor
 final class AreaSelectionSession {
     private let presenter = OverlayPresenter()
+    private let mode: CaptureMode
     private var continuation: CheckedContinuation<Capture?, Never>?
+
+    init(mode: CaptureMode = .area) {
+        self.mode = mode
+    }
 
     /// Returns nil if the user cancels.
     func run(snapshots: [DisplaySnapshot]) async -> Capture? {
@@ -46,7 +51,7 @@ final class AreaSelectionSession {
             width: pixels.width / snapshot.scale,
             height: pixels.height / snapshot.scale
         )
-        finish(Capture(image: image, scale: snapshot.scale, mode: .area, sourceRect: source, displayID: snapshot.displayID))
+        finish(Capture(image: image, scale: snapshot.scale, mode: mode, sourceRect: source, displayID: snapshot.displayID))
     }
 
     private func finish(_ capture: Capture?) {

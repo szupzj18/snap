@@ -6,6 +6,7 @@ extension KeyboardShortcuts.Name {
     static let captureArea = Self("captureArea", default: .init(.four, modifiers: [.option, .shift]))
     static let captureWindow = Self("captureWindow", default: .init(.five, modifiers: [.option, .shift]))
     static let captureFullscreen = Self("captureFullscreen", default: .init(.three, modifiers: [.option, .shift]))
+    static let captureText = Self("captureText", default: .init(.two, modifiers: [.option, .shift]))
 }
 
 extension CaptureMode {
@@ -14,6 +15,7 @@ extension CaptureMode {
         case .area: .captureArea
         case .window: .captureWindow
         case .fullscreen: .captureFullscreen
+        case .text: .captureText
         }
     }
 }

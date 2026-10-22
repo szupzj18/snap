@@ -14,7 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var router = PostCaptureRouter(
         settings: settings, actions: actions, quickAccess: quickAccess, pins: pins, editors: editors
     )
-    private lazy var coordinator = CaptureCoordinator(settings: settings, onboarding: onboarding, router: router)
+    private lazy var coordinator = CaptureCoordinator(settings: settings, onboarding: onboarding, router: router, actions: actions)
     private var statusItemController: StatusItemController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {

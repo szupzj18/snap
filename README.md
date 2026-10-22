@@ -17,6 +17,9 @@ Retina scaling.
   live pixel size, Shift for a square, Esc or right-click to cancel.
 - **Window capture**: hover to highlight, click to capture. Keeps the window's rounded corners
   on a transparent background and adds a drop shadow (optional).
+- **Capture text (OCR)**: select an area and its text goes to the clipboard, recognized on
+  your Mac with the Vision framework (English, Chinese and more; table rows keep their cells
+  tab-separated). Also available on any Quick Access preview.
 - **Quick Access preview** in the bottom-right corner after each capture: drag it into any app
   as a file, copy, save, annotate, pin or close. Closes itself after a few seconds unless hovered.
 - **Annotation editor**: arrow, rectangle, text, highlight, pixelate, blur and numbered
@@ -32,8 +35,9 @@ Retina scaling.
 | Capture area | ⌥⇧4 |
 | Capture window | ⌥⇧5 |
 | Capture fullscreen (display under the pointer) | ⌥⇧3 |
+| Capture text (OCR) | ⌥⇧2 |
 
-All three can be changed in Settings › Shortcuts. The defaults stay off macOS's own ⌘⇧3/4/5;
+All of them can be changed in Settings › Shortcuts. The defaults stay off macOS's own ⌘⇧3/4/5;
 to use those for Snap, turn them off first in System Settings › Keyboard ›
 Keyboard Shortcuts › Screenshots.
 
@@ -104,7 +108,6 @@ spaces and is unit-tested.
 Planned for after the MVP, with the extension points already in place:
 
 - Scrolling capture: a new `CaptureMode`, reusing area selection.
-- OCR with the Vision framework: another action on a `Capture`, offered in Quick Access.
 - Screen recording and GIF export: an SCStream-based service beside `ScreenshotService`.
 - Capture history: a consumer of `PostCaptureRouter` that stores each capture.
 - Upload and sharing.

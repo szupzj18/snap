@@ -27,6 +27,7 @@ struct QuickAccessCardView: View {
                     HStack {
                         CornerButton(systemImage: "pencil", help: "Annotate", action: handlers.edit)
                         Spacer()
+                        CornerButton(systemImage: "text.viewfinder", help: "Copy text (OCR)", action: handlers.copyText)
                     }
                 }
                 .padding(6)
