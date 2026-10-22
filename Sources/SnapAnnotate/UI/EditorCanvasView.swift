@@ -15,6 +15,15 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
     private var textFontSize: CGFloat = 0
     private var observations: Set<AnyCancellable> = []
 
+    // Select tool.
+    private var selectedID: Annotation.ID?
+    /// The annotation being dragged and where the drag started (image pixels).
+    private var moving: (original: Annotation, start: CGPoint)?
+    /// Where the dragged annotation is now; written to the document on mouse up (one undo step).
+    private var movePreview: Annotation?
+    /// Set while the toolbar is updated to match a newly selected annotation.
+    private var isSyncingToolbar = false
+
     init(document: AnnotationDocument, state: EditorState) {
         self.document = document
         self.state = state
@@ -24,10 +33,21 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
             .sink { [weak self] _ in self?.needsDisplay = true }
             .store(in: &observations)
         state.$tool
-            .sink { [weak self] _ in
+            .sink { [weak self] tool in
                 guard let self else { return }
                 self.commitText()
+                if tool != .select { self.deselect() }
                 self.window?.invalidateCursorRects(for: self)
+            }
+            .store(in: &observations)
+        // Published values arrive before they're stored, so use the value passed in.
+        state.$color
+            .sink { [weak self] color in self?.updateSelection { $0.color = color } }
+            .store(in: &observations)
+        state.$size
+            .sink { [weak self] size in
+                guard let self else { return }
+                self.updateSelection { $0 = $0.resized(to: size, scale: self.document.scale) }
             }
             .store(in: &observations)
     }
@@ -85,12 +105,79 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
         context.translateBy(x: rect.minX, y: rect.minY)
         context.scaleBy(x: viewScale, y: viewScale)
         context.interpolationQuality = .high
-        renderer.draw(document.annotations + [draft].compactMap { $0 }, in: context)
+        var annotations = document.annotations
+        if let movePreview, let index = annotations.firstIndex(where: { $0.id == movePreview.id }) {
+            annotations[index] = movePreview
+        }
+        renderer.draw(annotations + [draft].compactMap { $0 }, in: context)
         context.restoreGState()
+
+        if let selected = movePreview ?? selectedAnnotation {
+            drawSelection(around: selected)
+        }
+    }
+
+    private func drawSelection(around annotation: Annotation) {
+        let box = annotation.bounds
+        let origin = viewPoint(box.origin)
+        let rect = CGRect(x: origin.x, y: origin.y, width: box.width * viewScale, height: box.height * viewScale)
+            .insetBy(dx: -4, dy: -4)
+        let path = NSBezierPath(roundedRect: rect, xRadius: 3, yRadius: 3)
+        path.lineWidth = 1.5
+        NSColor.white.withAlphaComponent(0.9).setStroke()
+        path.stroke()
+        path.setLineDash([4, 3], count: 2, phase: 0)
+        NSColor.controlAccentColor.setStroke()
+        path.stroke()
     }
 
     override func resetCursorRects() {
-        addCursorRect(imageRect, cursor: state.tool == .text ? .iBeam : .crosshair)
+        let cursor: NSCursor = switch state.tool {
+        case .select: .arrow
+        case .text: .iBeam
+        default: .crosshair
+        }
+        addCursorRect(imageRect, cursor: cursor)
+    }
+
+    // MARK: Selection
+
+    private var selectedAnnotation: Annotation? {
+        selectedID.flatMap { id in document.annotations.first { $0.id == id } }
+    }
+
+    private func select(_ annotation: Annotation?) {
+        selectedID = annotation?.id
+        if let annotation, state.tool.usesColor, annotation.shape.usesColor {
+            isSyncingToolbar = true
+            state.color = annotation.color
+            isSyncingToolbar = false
+        }
+        needsDisplay = true
+    }
+
+    private func deselect() {
+        guard selectedID != nil else { return }
+        selectedID = nil
+        moving = nil
+        movePreview = nil
+        needsDisplay = true
+    }
+
+    private func updateSelection(_ change: (inout Annotation) -> Void) {
+        guard !isSyncingToolbar, var annotation = selectedAnnotation else { return }
+        change(&annotation)
+        document.replace(annotation)
+    }
+
+    private func deleteSelection() {
+        guard let selectedID else { return }
+        document.remove(id: selectedID)
+        deselect()
+    }
+
+    @objc func delete(_ sender: Any?) {
+        deleteSelection()
     }
 
     // MARK: Mouse
@@ -102,6 +189,11 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
         let scale = document.scale
 
         switch state.tool {
+        case .select:
+            // A few screen points of slack, whatever the zoom.
+            let hit = document.annotation(at: point, tolerance: 6 / viewScale)
+            select(hit)
+            moving = hit.map { ($0, point) }
         case .text:
             if textField != nil {
                 commitText()
@@ -121,8 +213,13 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
     }
 
     override func mouseDragged(with event: NSEvent) {
-        guard let start = dragStart else { return }
         let point = imagePoint(convert(event.locationInWindow, from: nil))
+        if let moving {
+            movePreview = moving.original.moved(by: CGVector(dx: point.x - moving.start.x, dy: point.y - moving.start.y))
+            needsDisplay = true
+            return
+        }
+        guard let start = dragStart else { return }
         let rect = CGRect(x: min(start.x, point.x), y: min(start.y, point.y), width: abs(point.x - start.x), height: abs(point.y - start.y))
         let shape: AnnotationShape
         switch state.tool {
@@ -131,13 +228,20 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
         case .highlight: shape = .highlight(rect)
         case .pixelate: shape = .pixelate(rect)
         case .blur: shape = .blur(rect)
-        case .text, .counter: return
+        case .select, .text, .counter: return
         }
         draft = Annotation(id: draft?.id ?? UUID(), shape: shape, color: state.color, lineWidth: state.size.lineWidth * document.scale)
         needsDisplay = true
     }
 
     override func mouseUp(with event: NSEvent) {
+        if moving != nil {
+            if let movePreview { document.replace(movePreview) }
+            moving = nil
+            movePreview = nil
+            needsDisplay = true
+            return
+        }
         defer {
             draft = nil
             dragStart = nil
@@ -160,6 +264,18 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
 
     override func keyDown(with event: NSEvent) {
         let modifiers = event.modifierFlags.intersection([.command, .control, .option])
+        if modifiers.isEmpty, selectedID != nil {
+            switch event.keyCode {
+            case 51, 117: // Delete, Forward Delete
+                deleteSelection()
+                return
+            case 53: // Esc
+                deselect()
+                return
+            default:
+                break
+            }
+        }
         if modifiers.isEmpty, let character = event.charactersIgnoringModifiers?.lowercased().first,
            let tool = AnnotationTool.allCases.first(where: { $0.key == character }) {
             state.tool = tool

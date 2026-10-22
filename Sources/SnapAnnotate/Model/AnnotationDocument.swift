@@ -27,6 +27,20 @@ public final class AnnotationDocument: ObservableObject {
         apply(annotations + [annotation])
     }
 
+    /// Swaps in a changed version of an existing annotation, keeping its stacking order.
+    public func replace(_ annotation: Annotation) {
+        guard let index = annotations.firstIndex(where: { $0.id == annotation.id }),
+              annotations[index] != annotation else { return }
+        var updated = annotations
+        updated[index] = annotation
+        apply(updated)
+    }
+
+    public func remove(id: Annotation.ID) {
+        guard annotations.contains(where: { $0.id == id }) else { return }
+        apply(annotations.filter { $0.id != id })
+    }
+
     /// Numbers continue from the highest counter, so undoing one frees its number.
     public var nextCounterNumber: Int {
         let numbers = annotations.compactMap { annotation -> Int? in

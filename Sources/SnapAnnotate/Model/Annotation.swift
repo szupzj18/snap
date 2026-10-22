@@ -42,6 +42,16 @@ public enum AnnotationShape: Equatable {
     case counter(center: CGPoint, number: Int, radius: CGFloat)
 }
 
+extension AnnotationShape {
+    /// Pixelate and blur don't use a color.
+    var usesColor: Bool {
+        switch self {
+        case .pixelate, .blur: false
+        default: true
+        }
+    }
+}
+
 public struct Annotation: Identifiable, Equatable {
     public let id: UUID
     public var shape: AnnotationShape
