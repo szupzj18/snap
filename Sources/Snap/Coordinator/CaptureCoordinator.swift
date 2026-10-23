@@ -64,7 +64,11 @@ final class CaptureCoordinator {
         case .area, .text:
             // Freeze first, then select: what the user sees is exactly what gets cropped.
             let snapshots = try await service.captureAllDisplays()
-            return await AreaSelectionSession(mode: mode).run(snapshots: snapshots)
+            let result = await AreaSelectionSession(mode: mode, allowsWindowSwitch: mode == .area).run(snapshots: snapshots)
+            if case .switchToWindow = result {
+                return try await captureWindow()
+            }
+            return result.capture
         case .window:
             return try await captureWindow()
         case .recording, .scrolling:

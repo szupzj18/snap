@@ -14,7 +14,9 @@ Retina scaling.
 
 - **Capture area, window or fullscreen** from the menu bar or global shortcuts.
 - **Area selection** on a frozen image of every display: dimmed overlay, crosshair guides,
-  live pixel size, Shift for a square, Esc or right-click to cancel.
+  a magnifier with pixel coordinates, live pixel size. While dragging, Shift makes a square,
+  Option grows from the center and holding Space moves the selection. Space before dragging
+  switches to window capture; Esc or right-click cancels.
 - **Window capture**: hover to highlight, click to capture. Keeps the window's rounded corners
   on a transparent background and adds a drop shadow (optional).
 - **Capture text (OCR)**: select an area and its text goes to the clipboard, recognized on
