@@ -81,6 +81,19 @@ gets its own Screen Recording permission.
 `SNAP_INTEGRATION=1 make test` from a terminal that has Screen Recording access; one of them
 briefly shows a small test window.
 
+### UI snapshots
+
+```sh
+make ui-snapshots   # writes build/ui-snapshots/*.png
+```
+
+Renders the Quick Access cards, area selection (with the magnifier), the editor, its crop mode,
+the history window and Settings, each to a PNG, so UI changes can be reviewed side by side
+without clicking through the app. Screen content in them is made up. The windows are placed
+far outside every display, so nothing appears on screen, but capturing them needs Screen
+Recording access for the terminal. They're skipped in `make test`. The cases live in
+`Tests/SnapUISnapshots`; add one there when you change a piece of UI.
+
 ### Code signing
 
 macOS remembers the Screen Recording permission per code signature. With the default ad-hoc

@@ -9,8 +9,8 @@ public final class EditorWindowController: NSWindowController, NSWindowDelegate 
 
     private let capture: Capture
     private let settings: AppSettings
-    private let annotationDocument: AnnotationDocument
-    private let state = EditorState()
+    let annotationDocument: AnnotationDocument
+    let state = EditorState()
     private let renderer: AnnotationRenderer
 
     public init(capture: Capture, settings: AppSettings) {
