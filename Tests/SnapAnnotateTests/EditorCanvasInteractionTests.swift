@@ -137,4 +137,23 @@ final class EditorCanvasInteractionTests: XCTestCase {
         canvas.mouseUp(with: mouse(.leftMouseUp, 170, 60))
         XCTAssertEqual(document.annotations.last?.shape, .rectangle(CGRect(x: 120, y: 20, width: 50, height: 40)))
     }
+
+    func testPenDrawsAFreehandStroke() {
+        state.tool = .pen
+        canvas.mouseDown(with: mouse(.leftMouseDown, 10, 100))
+        for x in stride(from: 20, through: 80, by: 10) {
+            canvas.mouseDragged(with: mouse(.leftMouseDragged, CGFloat(x), 100 + CGFloat(x % 20)))
+        }
+        canvas.mouseUp(with: mouse(.leftMouseUp, 80, 100))
+        guard case let .freehand(points)? = document.annotations.last?.shape else { return XCTFail("no stroke") }
+        XCTAssertEqual(points.first, CGPoint(x: 10, y: 100))
+        XCTAssertEqual(points.count, 8)
+    }
+
+    func testGroupedToolRemembersLastUsed() {
+        XCTAssertEqual(state.shownTool(for: AnnotationTool.groups[0]), .rectangle)
+        state.tool = .ellipse
+        state.tool = .arrow
+        XCTAssertEqual(state.shownTool(for: AnnotationTool.groups[0]), .ellipse)
+    }
 }

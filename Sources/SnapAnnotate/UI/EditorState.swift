@@ -2,7 +2,7 @@ import Combine
 import CoreGraphics
 
 public enum AnnotationTool: String, CaseIterable, Identifiable {
-    case select, crop, arrow, rectangle, text, highlight, pixelate, blur, counter
+    case select, crop, arrow, rectangle, ellipse, line, pen, text, highlight, pixelate, blur, spotlight, counter
 
     public var id: String { rawValue }
 
@@ -12,6 +12,10 @@ public enum AnnotationTool: String, CaseIterable, Identifiable {
         case .crop: "Crop"
         case .arrow: "Arrow"
         case .rectangle: "Rectangle"
+        case .ellipse: "Ellipse"
+        case .line: "Line"
+        case .pen: "Pen"
+        case .spotlight: "Spotlight"
         case .text: "Text"
         case .highlight: "Highlight"
         case .pixelate: "Pixelate"
@@ -26,6 +30,10 @@ public enum AnnotationTool: String, CaseIterable, Identifiable {
         case .crop: "crop"
         case .arrow: "arrow.up.right"
         case .rectangle: "rectangle"
+        case .ellipse: "circle"
+        case .line: "line.diagonal"
+        case .pen: "scribble"
+        case .spotlight: "light.max"
         case .text: "t.square"
         case .highlight: "highlighter"
         case .pixelate: "squareshape.split.3x3"
@@ -41,6 +49,10 @@ public enum AnnotationTool: String, CaseIterable, Identifiable {
         case .crop: "c"
         case .arrow: "a"
         case .rectangle: "r"
+        case .ellipse: "o"
+        case .line: "l"
+        case .pen: "d"
+        case .spotlight: "s"
         case .text: "t"
         case .highlight: "h"
         case .pixelate: "p"
@@ -49,8 +61,16 @@ public enum AnnotationTool: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Pixelate, blur and crop ignore the color.
-    var usesColor: Bool { self != .pixelate && self != .blur && self != .crop }
+    /// Pixelate, blur, spotlight and crop ignore the color.
+    var usesColor: Bool { ![.pixelate, .blur, .spotlight, .crop].contains(self) }
+
+    /// Tools that share one toolbar button with a menu, to keep the toolbar narrow.
+    static let groups: [[AnnotationTool]] = [[.rectangle, .ellipse, .line], [.pixelate, .blur]]
+
+    /// The toolbar, in order; a group shows as one button.
+    static let toolbar: [[AnnotationTool]] = [
+        [.select], [.crop], [.arrow], groups[0], [.pen], [.text], [.highlight], groups[1], [.spotlight], [.counter],
+    ]
 }
 
 public enum AnnotationSize: String, CaseIterable, Identifiable {
@@ -74,7 +94,20 @@ public enum AnnotationSize: String, CaseIterable, Identifiable {
 
 /// The editor's current tool settings.
 final class EditorState: ObservableObject {
-    @Published var tool: AnnotationTool = .arrow
+    @Published var tool: AnnotationTool = .arrow {
+        didSet {
+            if let index = AnnotationTool.groups.firstIndex(where: { $0.contains(tool) }) {
+                lastInGroup[index] = tool
+            }
+        }
+    }
     @Published var color: RGBA = .red
     @Published var size: AnnotationSize = .medium
+    /// What each grouped toolbar button shows: the tool last used from that group.
+    @Published private(set) var lastInGroup: [Int: AnnotationTool] = [:]
+
+    func shownTool(for group: [AnnotationTool]) -> AnnotationTool {
+        guard let index = AnnotationTool.groups.firstIndex(of: group) else { return group[0] }
+        return lastInGroup[index] ?? group[0]
+    }
 }

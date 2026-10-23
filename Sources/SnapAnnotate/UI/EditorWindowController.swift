@@ -147,22 +147,52 @@ private struct EditorToolbar: View {
     let copy: () -> Void
     let save: () -> Void
 
+    private func toolIcon(_ tool: AnnotationTool, selected: Bool, width: CGFloat = 30) -> some View {
+        Image(systemName: tool.systemImage)
+            .font(.system(size: 14))
+            .frame(width: width, height: 28)
+            .background(RoundedRectangle(cornerRadius: 6).fill(selected ? Color.accentColor.opacity(0.25) : .clear))
+            .contentShape(Rectangle())
+    }
+
+    private func toolButton(_ tool: AnnotationTool) -> some View {
+        Button { state.tool = tool } label: { toolIcon(tool, selected: state.tool == tool) }
+            .buttonStyle(.plain)
+            .help("\(tool.title) (\(String(tool.key).uppercased()))")
+    }
+
+    /// One button for a group: click uses the tool it shows, the arrow picks another.
+    private func toolMenu(_ group: [AnnotationTool]) -> some View {
+        let shown = state.shownTool(for: group)
+        return Menu {
+            ForEach(group) { tool in
+                Button { state.tool = tool } label: {
+                    Label("\(tool.title)  (\(String(tool.key).uppercased()))", systemImage: tool.systemImage)
+                }
+            }
+        } label: {
+            Image(systemName: shown.systemImage)
+        } primaryAction: {
+            state.tool = shown
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.visible)
+        .fixedSize()
+        .frame(height: 28)
+        .padding(.horizontal, 4)
+        .background(RoundedRectangle(cornerRadius: 6).fill(group.contains(state.tool) ? Color.accentColor.opacity(0.25) : .clear))
+        .help(group.map(\.title).joined(separator: ", "))
+    }
+
     var body: some View {
         HStack(spacing: 10) {
             HStack(spacing: 2) {
-                ForEach(AnnotationTool.allCases) { tool in
-                    Button { state.tool = tool } label: {
-                        Image(systemName: tool.systemImage)
-                            .font(.system(size: 14))
-                            .frame(width: 30, height: 28)
-                            .background(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(state.tool == tool ? Color.accentColor.opacity(0.25) : .clear)
-                            )
-                            .contentShape(Rectangle())
+                ForEach(AnnotationTool.toolbar, id: \.self) { group in
+                    if group.count == 1 {
+                        toolButton(group[0])
+                    } else {
+                        toolMenu(group)
                     }
-                    .buttonStyle(.plain)
-                    .help("\(tool.title) (\(String(tool.key).uppercased()))")
                 }
             }
 

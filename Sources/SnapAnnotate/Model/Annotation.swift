@@ -34,6 +34,12 @@ public struct RGBA: Equatable, Hashable {
 public enum AnnotationShape: Equatable {
     case arrow(from: CGPoint, to: CGPoint)
     case rectangle(CGRect)
+    case ellipse(CGRect)
+    case line(from: CGPoint, to: CGPoint)
+    /// A freehand pen stroke through these points.
+    case freehand([CGPoint])
+    /// Everything outside the rect is dimmed; several spotlights stay lit together.
+    case spotlight(CGRect)
     case highlight(CGRect)
     case pixelate(CGRect)
     case blur(CGRect)
@@ -46,7 +52,7 @@ extension AnnotationShape {
     /// Pixelate and blur don't use a color.
     var usesColor: Bool {
         switch self {
-        case .pixelate, .blur: false
+        case .pixelate, .blur, .spotlight: false
         default: true
         }
     }

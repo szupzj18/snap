@@ -59,6 +59,8 @@ enum Snapshot {
         configuration.height = Int(filter.contentRect.height * scale)
         configuration.ignoreGlobalClipSingleWindow = true
         configuration.ignoreShadowsSingleWindow = true
+        // Otherwise the real pointer is drawn in wherever it happens to be.
+        configuration.showsCursor = false
         var image = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: configuration)
 
         if !includeTitleBar {
