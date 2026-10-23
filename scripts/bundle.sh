@@ -7,6 +7,9 @@
 # Recording permission to the signature, so use a stable identity (for example
 # your "Apple Development: ..." certificate) during development; otherwise the
 # permission has to be granted again after every rebuild. Defaults to ad-hoc.
+#
+# VERSION overrides CFBundleShortVersionString (e.g. 0.2.0 when building a release tag).
+# The build number (CFBundleVersion) is the number of commits, so every build counts up.
 set -euo pipefail
 
 CONFIG="${1:-debug}"
@@ -32,6 +35,11 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/Snap" "$APP/Contents/MacOS/Snap"
 cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
+if [ -n "${VERSION:-}" ]; then
+    /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$APP/Contents/Info.plist"
+fi
+BUILD_NUMBER="$(git -C "$ROOT" rev-list --count HEAD 2>/dev/null || echo 1)"
+/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$APP/Contents/Info.plist"
 cp "$ROOT/Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 
 # macOS 26 draws app icons from an Icon Composer document compiled into Assets.car, and frames
@@ -54,7 +62,12 @@ for bundle in "$BIN_DIR"/*.bundle; do
     cp -R "$bundle" "$APP/Contents/Resources/"
 done
 
-codesign --force --options runtime --timestamp=none \
+# Notarization requires a secure timestamp; skip the network round trip for other identities.
+TIMESTAMP="--timestamp=none"
+case "$SIGN_IDENTITY" in
+    "Developer ID Application"*) TIMESTAMP="--timestamp" ;;
+esac
+codesign --force --options runtime $TIMESTAMP \
     --entitlements "$ROOT/Resources/Snap.entitlements" \
     --sign "$SIGN_IDENTITY" "$APP"
 

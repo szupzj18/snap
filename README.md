@@ -40,6 +40,18 @@ Retina scaling.
   Open History… from the menu bar to copy, annotate, pin, drag out or reveal any of them.
 - **Settings**: save folder, file name template, after-capture actions, shortcuts.
 
+## Install
+
+Download the latest `Snap-<version>.dmg` from [Releases](https://github.com/szupzj18/snap/releases),
+open it and drag Snap into Applications. On first launch Snap walks you through granting
+Screen Recording permission.
+
+Builds that aren't notarized by Apple need one extra step the first time: Control-click Snap in
+Applications, choose **Open**, then **Open** again. The release notes say when that applies.
+
+Snap checks GitHub for a newer release once a day (a single request to GitHub's public API, no
+other data sent) and offers to open the download page. Turn it off in Settings › General.
+
 ## Shortcuts
 
 | Action | Default |
@@ -80,6 +92,26 @@ gets its own Screen Recording permission.
 `make test` skips the tests that take real screenshots. Run them with
 `SNAP_INTEGRATION=1 make test` from a terminal that has Screen Recording access; one of them
 briefly shows a small test window.
+
+### Releasing
+
+```sh
+git tag v0.2.0 && git push origin v0.2.0
+```
+
+The Release workflow builds `Snap-0.2.0.dmg` and attaches it to a **draft** release; review it on
+GitHub and publish. `make dmg` (with `VERSION=...`) does the same packaging locally.
+
+Signing and notarization switch on when the repository has these secrets:
+
+| Secret | What |
+| --- | --- |
+| `DEVELOPER_ID_P12_BASE64` | Developer ID Application certificate and key, exported as .p12, base64-encoded |
+| `DEVELOPER_ID_P12_PASSWORD` | The .p12 export password |
+| `NOTARY_KEY_P8_BASE64` | App Store Connect API key (.p8, base64), Developer role |
+| `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID` | That key's ID and issuer ID |
+
+Without them the app is ad-hoc signed and the release notes explain the first-launch step.
 
 ### UI snapshots
 

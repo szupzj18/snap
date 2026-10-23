@@ -37,6 +37,7 @@ public final class AppSettings: ObservableObject {
         static let recordingFPS = "recordingFPS"
         static let recordingShowsCursor = "recordingShowsCursor"
         static let playSound = "playSound"
+        static let checkForUpdates = "checkForUpdates"
     }
 
     private let defaults: UserDefaults
@@ -86,6 +87,11 @@ public final class AppSettings: ObservableObject {
         didSet { defaults.set(playSound, forKey: Key.playSound) }
     }
 
+    /// Look for a newer release on GitHub once a day.
+    @Published public var checkForUpdates: Bool {
+        didSet { defaults.set(checkForUpdates, forKey: Key.checkForUpdates) }
+    }
+
     public static let defaultSaveDirectory = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask)[0]
     public static let defaultAfterCapture: Set<AfterCaptureAction> = [.showQuickAccess, .save]
 
@@ -104,6 +110,7 @@ public final class AppSettings: ObservableObject {
         recordingFPS = defaults.object(forKey: Key.recordingFPS) as? Int ?? 30
         recordingShowsCursor = defaults.object(forKey: Key.recordingShowsCursor) as? Bool ?? true
         playSound = defaults.object(forKey: Key.playSound) as? Bool ?? true
+        checkForUpdates = defaults.object(forKey: Key.checkForUpdates) as? Bool ?? true
     }
 
     public func filename(for capture: Capture) -> String {

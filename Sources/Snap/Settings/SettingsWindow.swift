@@ -42,6 +42,7 @@ private struct GeneralSettingsView: View {
             Section("General") {
                 LaunchAtLoginToggle()
                 Toggle("Play a sound when capturing", isOn: $settings.playSound)
+                Toggle("Check for updates once a day", isOn: $settings.checkForUpdates)
             }
 
             Section("Saving") {
