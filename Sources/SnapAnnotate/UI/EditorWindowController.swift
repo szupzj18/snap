@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import SnapCore
 import SwiftUI
 
@@ -12,11 +13,14 @@ public final class EditorWindowController: NSWindowController, NSWindowDelegate 
     let annotationDocument: AnnotationDocument
     let state = EditorState()
     private let renderer: AnnotationRenderer
+    private var rememberBackdrop: AnyCancellable?
 
     public init(capture: Capture, settings: AppSettings) {
         self.capture = capture
         self.settings = settings
         annotationDocument = AnnotationDocument(image: capture.image, scale: capture.scale)
+        // Start from the background used last time.
+        annotationDocument.backdrop = Backdrop.lastUsed
         renderer = AnnotationRenderer(base: capture.image, scale: capture.scale)
 
         let window = EditorWindow(
@@ -42,6 +46,7 @@ public final class EditorWindowController: NSWindowController, NSWindowDelegate 
             save: { [weak self] in self?.saveResult() }
         ))
         window.center()
+        rememberBackdrop = annotationDocument.$backdrop.sink { Backdrop.lastUsed = $0 }
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
@@ -69,7 +74,9 @@ public final class EditorWindowController: NSWindowController, NSWindowDelegate 
     // MARK: Export
 
     private func exportedImage() -> CGImage? {
-        renderer.export(annotationDocument.annotations, crop: annotationDocument.crop)
+        guard let content = renderer.export(annotationDocument.annotations, crop: annotationDocument.crop) else { return nil }
+        let backdrop = annotationDocument.backdrop
+        return backdrop.isEnabled ? BackdropRenderer.compose(content, backdrop: backdrop, scale: capture.scale) : content
     }
 
     private func copyResult() {
@@ -135,6 +142,8 @@ struct EditorView: View {
 private struct EditorToolbar: View {
     @ObservedObject var document: AnnotationDocument
     @ObservedObject var state: EditorState
+    @State private var showBackdrop = false
+    @State private var showPalette = false
     let copy: () -> Void
     let save: () -> Void
 
@@ -159,20 +168,41 @@ private struct EditorToolbar: View {
 
             Divider().frame(height: 20)
 
-            HStack(spacing: 6) {
-                ForEach(RGBA.palette, id: \.self) { color in
-                    Button { state.color = color } label: {
-                        Circle()
-                            .fill(Color(cgColor: color.cgColor))
-                            .overlay(Circle().strokeBorder(.primary.opacity(0.25)))
-                            .frame(width: 16, height: 16)
-                            .padding(3)
-                            .overlay(Circle().strokeBorder(state.color == color ? Color.accentColor : .clear, lineWidth: 2))
-                    }
-                    .buttonStyle(.plain)
+            // One swatch with the palette behind it keeps the toolbar narrow.
+            Button { showPalette.toggle() } label: {
+                HStack(spacing: 3) {
+                    Circle()
+                        .fill(Color(cgColor: state.color.cgColor))
+                        .overlay(Circle().strokeBorder(.primary.opacity(0.25)))
+                        .frame(width: 18, height: 18)
+                    Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold)).foregroundStyle(.secondary)
                 }
+                .padding(.horizontal, 4)
+                .frame(height: 28)
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .help("Color")
             .opacity(state.tool.usesColor ? 1 : 0.35)
+            .popover(isPresented: $showPalette, arrowEdge: .bottom) {
+                HStack(spacing: 8) {
+                    ForEach(RGBA.palette, id: \.self) { color in
+                        Button {
+                            state.color = color
+                            showPalette = false
+                        } label: {
+                            Circle()
+                                .fill(Color(cgColor: color.cgColor))
+                                .overlay(Circle().strokeBorder(.primary.opacity(0.25)))
+                                .frame(width: 20, height: 20)
+                                .padding(3)
+                                .overlay(Circle().strokeBorder(state.color == color ? Color.accentColor : .clear, lineWidth: 2))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(12)
+            }
 
             if state.tool == .crop {
                 Button("Reset Crop") { document.setCrop(nil) }
@@ -199,9 +229,19 @@ private struct EditorToolbar: View {
 
             Spacer(minLength: 8)
 
+            Button { showBackdrop.toggle() } label: {
+                Image(systemName: document.backdrop.isEnabled ? "photo.fill.on.rectangle.fill" : "photo.on.rectangle")
+            }
+            .help("Background: put the screenshot on a backdrop for sharing")
+            .popover(isPresented: $showBackdrop, arrowEdge: .bottom) {
+                BackdropInspector(document: document)
+            }
+
             Button("Copy", action: copy)
+                .fixedSize()
                 .help("Copy the annotated image (⌘C)")
             Button("Save…", action: save)
+                .fixedSize()
                 .keyboardShortcut("s")
                 .buttonStyle(.borderedProminent)
         }

@@ -36,7 +36,9 @@ Retina scaling.
 - **Annotation editor**: arrow, rectangle, text, highlight, pixelate, blur and numbered
   counters, with colors, three sizes, undo/redo, copy and PNG export at full resolution.
   The select tool moves, restyles and deletes what you've drawn; double-click a text to change
-  it. Crop with C. Hold Shift for squares and 45° arrows, Option to draw from the center.
+  it. Crop with C. **Background** puts the result on a gradient, solid color or your desktop
+  picture, with padding, rounded corners, shadow and an optional 1:1, 4:3 or 16:9 canvas, ready
+  to share. Hold Shift for squares and 45° arrows, Option to draw from the center.
 - **Pins**: keep a capture floating above all windows. Drag to move, scroll or pinch to zoom,
   ⌥-scroll to change opacity, right-click for more.
 - **History**: the last 50 captures (configurable) are kept, so a closed preview is never lost.

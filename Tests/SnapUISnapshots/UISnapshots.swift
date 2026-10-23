@@ -85,6 +85,21 @@ final class UISnapshots: SnapshotTestCase {
         try await Snapshot.capture(controller.window!, name: "editor-crop")
     }
 
+    /// The editor with a background on, at the narrowest window size, plus the Background popover.
+    @MainActor
+    func testEditorBackdrop() async throws {
+        let controller = editor()
+        controller.annotationDocument.add(Annotation(shape: .arrow(from: CGPoint(x: 160, y: 1100), to: CGPoint(x: 900, y: 520)),
+                                                     color: .red, lineWidth: 10))
+        controller.annotationDocument.backdrop = Backdrop(isEnabled: true, fill: Backdrop.gradients[0], padding: 64,
+                                                          cornerRadius: 12, shadow: 0.6, aspect: .automatic)
+        controller.window?.setContentSize(CGSize(width: 860, height: 600))
+        try await Snapshot.capture(controller.window!, name: "editor-backdrop")
+
+        let inspector = Snapshot.window(BackdropInspector(document: controller.annotationDocument))
+        try await Snapshot.capture(inspector, name: "backdrop-inspector", includeTitleBar: false)
+    }
+
     /// The trim window with AVKit's trim bar open over a made-up recording.
     @MainActor
     func testTrim() async throws {
@@ -131,6 +146,8 @@ final class UISnapshots: SnapshotTestCase {
     @MainActor
     private func editor(image: CGImage = FakeContent.screenshot(width: 2000, height: 1300)) -> EditorWindowController {
         let suite = "SnapUISnapshots.editor"
+        // Each snapshot starts without the background another one turned on.
+        Backdrop.lastUsed = Backdrop()
         let capture = Capture(image: image, scale: 2, mode: .area, sourceRect: .zero, displayID: nil)
         let controller = EditorWindowController(capture: capture, settings: AppSettings(defaults: UserDefaults(suiteName: suite)!))
         controller.window?.setContentSize(CGSize(width: 960, height: 600))

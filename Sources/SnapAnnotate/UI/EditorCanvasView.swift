@@ -38,6 +38,9 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
         document.$annotations
             .sink { [weak self] _ in self?.needsDisplay = true }
             .store(in: &observations)
+        document.$backdrop
+            .sink { [weak self] _ in self?.needsDisplay = true }
+            .store(in: &observations)
         document.$crop
             .sink { [weak self] _ in
                 self?.commitText()
@@ -84,14 +87,30 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
         state.tool == .crop ? CGRect(origin: .zero, size: renderer.imageSize) : document.visibleRect
     }
 
-    /// Where `shownRect` is drawn, in view coordinates: fitted with a margin, never larger than its point size.
-    private var imageRect: CGRect {
-        let shown = shownRect.size
-        let pointSize = CGSize(width: shown.width / document.scale, height: shown.height / document.scale)
+    /// The background around the screenshot, when on. Hidden while cropping, which needs the whole image.
+    private var backdropLayout: BackdropRenderer.Layout? {
+        guard document.backdrop.isEnabled, state.tool != .crop else { return nil }
+        return BackdropRenderer.layout(contentSize: shownRect.size, backdrop: document.backdrop, scale: document.scale)
+    }
+
+    /// Everything drawn, in view coordinates: the background canvas if there is one, otherwise the
+    /// screenshot. Fitted with a margin, never larger than its point size.
+    private var canvasRect: CGRect {
+        let pixels = backdropLayout?.canvasSize ?? shownRect.size
+        let pointSize = CGSize(width: pixels.width / document.scale, height: pixels.height / document.scale)
         let available = bounds.insetBy(dx: 24, dy: 24)
         let fit = min(1, available.width / pointSize.width, available.height / pointSize.height)
         let size = CGSize(width: pointSize.width * fit, height: pointSize.height * fit)
         return CGRect(x: bounds.midX - size.width / 2, y: bounds.midY - size.height / 2, width: size.width, height: size.height).integral
+    }
+
+    /// Where `shownRect` is drawn, in view coordinates.
+    private var imageRect: CGRect {
+        let canvas = canvasRect
+        guard let layout = backdropLayout else { return canvas }
+        let scale = canvas.width / layout.canvasSize.width
+        return CGRect(x: canvas.minX + layout.contentRect.minX * scale, y: canvas.minY + layout.contentRect.minY * scale,
+                      width: layout.contentRect.width * scale, height: layout.contentRect.height * scale)
     }
 
     /// View points per image pixel.
@@ -128,19 +147,46 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
         NSColor.underPageBackgroundColor.setFill()
         bounds.fill()
         guard let context = NSGraphicsContext.current?.cgContext else { return }
-        let rect = imageRect
-        context.saveGState()
-        context.clip(to: rect)
-        context.translateBy(x: rect.minX, y: rect.minY)
-        context.scaleBy(x: viewScale, y: viewScale)
-        context.translateBy(x: -shownRect.minX, y: -shownRect.minY)
-        context.interpolationQuality = .high
         var annotations = document.annotations.filter { $0.id != editingTextID }
         if let movePreview, let index = annotations.firstIndex(where: { $0.id == movePreview.id }) {
             annotations[index] = movePreview
         }
-        renderer.draw(annotations + [draft].compactMap { $0 }, in: context)
-        context.restoreGState()
+        annotations += [draft].compactMap { $0 }
+        context.interpolationQuality = .high
+
+        let drawScreenshot = { [self] in
+            let rect = imageRect
+            context.saveGState()
+            context.translateBy(x: rect.minX, y: rect.minY)
+            context.scaleBy(x: viewScale, y: viewScale)
+            context.translateBy(x: -shownRect.minX, y: -shownRect.minY)
+            renderer.draw(annotations, in: context)
+            context.restoreGState()
+        }
+
+        if let layout = backdropLayout {
+            // Same geometry as the export, scaled to the view.
+            let canvas = canvasRect
+            let scale = canvas.width / layout.canvasSize.width
+            context.saveGState()
+            context.translateBy(x: canvas.minX, y: canvas.minY)
+            context.scaleBy(x: scale, y: scale)
+            BackdropRenderer.drawFill(document.backdrop.fill, in: CGRect(origin: .zero, size: layout.canvasSize), context: context)
+            BackdropRenderer.drawFrame(around: layout.contentRect, backdrop: document.backdrop, scale: document.scale, in: context) {
+                context.saveGState()
+                // Undo the canvas transform so the screenshot draws exactly as without a background.
+                context.scaleBy(x: 1 / scale, y: 1 / scale)
+                context.translateBy(x: -canvas.minX, y: -canvas.minY)
+                drawScreenshot()
+                context.restoreGState()
+            }
+            context.restoreGState()
+        } else {
+            context.saveGState()
+            context.clip(to: imageRect)
+            drawScreenshot()
+            context.restoreGState()
+        }
 
         if let selected = movePreview ?? selectedAnnotation {
             drawSelection(around: selected)
