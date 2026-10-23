@@ -26,7 +26,9 @@ Retina scaling.
   click Done, and get one tall image. Fixed headers stay at the top and fixed footers appear
   once at the bottom.
 - **Screen recording**: select an area and record it to MP4 (H.264, Retina resolution,
-  15/30/60 fps, pointer optional). The menu bar icon becomes a stop button with a timer.
+  15/30/60 fps, pointer optional), with sound from the Mac and/or the microphone mixed into one
+  track. The menu bar icon becomes a stop button with a timer; pause and resume from its menu
+  (pauses leave no gap).
   Turn any recording into a looping GIF from its Quick Access preview.
 - **Quick Access preview** in the bottom-right corner after each capture: drag it into any app
   as a file, copy, save, share, annotate, pin or close. Closes itself after a few seconds unless hovered.

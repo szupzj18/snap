@@ -9,7 +9,8 @@ final class RecordingController {
         case idle
         /// Selecting the area, starting, or finishing the file.
         case busy
-        case recording(since: Date)
+        case recording
+        case paused
     }
 
     var onStateChange: ((State) -> Void)?
@@ -24,6 +25,9 @@ final class RecordingController {
     private var recorder: ScreenRecorder?
     private var border: RecordingBorder?
     private var area: (rect: CGRect, displayID: CGDirectDisplayID)?
+    /// Recorded time before the current stretch, and when the current stretch began.
+    private var recordedBefore: TimeInterval = 0
+    private var stretchStart: Date?
 
     init(settings: AppSettings, service: ScreenshotService, onboarding: PermissionOnboardingController, router: PostCaptureRouter) {
         self.settings = settings
@@ -32,17 +36,40 @@ final class RecordingController {
         self.router = router
     }
 
+    /// Time actually recorded so far, pauses left out.
+    var elapsed: TimeInterval {
+        recordedBefore + (stretchStart.map { Date().timeIntervalSince($0) } ?? 0)
+    }
+
     /// Starts a recording, or stops the current one.
     func toggle() {
         switch state {
         case .idle: Task { await start() }
-        case .recording: Task { await stop() }
+        case .recording, .paused: Task { await stop() }
         case .busy: break
         }
     }
 
+    func togglePause() {
+        switch state {
+        case .recording:
+            recorder?.pause()
+            recordedBefore = elapsed
+            stretchStart = nil
+            border?.isPaused = true
+            state = .paused
+        case .paused:
+            recorder?.resume()
+            stretchStart = Date()
+            border?.isPaused = false
+            state = .recording
+        case .idle, .busy:
+            break
+        }
+    }
+
     func cancel() {
-        guard case .recording = state else { return }
+        guard state == .recording || state == .paused else { return }
         state = .busy
         Task {
             await recorder?.cancel()
@@ -80,10 +107,17 @@ final class RecordingController {
             try await recorder.start(
                 displayID: displayID,
                 rect: selection.sourceRect,
-                options: .init(fps: settings.recordingFPS, showsCursor: settings.recordingShowsCursor),
+                options: .init(
+                    fps: settings.recordingFPS,
+                    showsCursor: settings.recordingShowsCursor,
+                    systemAudio: settings.recordSystemAudio,
+                    microphone: settings.recordMicrophone
+                ),
                 to: url
             )
-            state = .recording(since: Date())
+            recordedBefore = 0
+            stretchStart = Date()
+            state = .recording
         } catch {
             await recorder?.cancel()
             reset()
@@ -92,7 +126,7 @@ final class RecordingController {
     }
 
     private func stop(after streamError: Error? = nil) async {
-        guard case .recording = state, let recorder, let area else { return }
+        guard state == .recording || state == .paused, let recorder, let area else { return }
         state = .busy
         border?.orderOut(nil)
         do {
@@ -111,6 +145,8 @@ final class RecordingController {
         border = nil
         recorder = nil
         area = nil
+        recordedBefore = 0
+        stretchStart = nil
         state = .idle
     }
 }
@@ -133,12 +169,18 @@ final class RecordingBorder: NSPanel {
         contentView = BorderView(frame: CGRect(origin: .zero, size: frame.size))
     }
 
+    /// Orange while paused, red while recording.
+    var isPaused = false {
+        didSet { contentView?.needsDisplay = true }
+    }
+
     private final class BorderView: NSView {
         override func draw(_ dirtyRect: NSRect) {
+            let paused = (window as? RecordingBorder)?.isPaused ?? false
             let path = NSBezierPath(rect: bounds.insetBy(dx: RecordingBorder.width / 2, dy: RecordingBorder.width / 2))
             path.lineWidth = RecordingBorder.width
             path.setLineDash([6, 4], count: 2, phase: 0)
-            NSColor.systemRed.setStroke()
+            (paused ? NSColor.systemOrange : NSColor.systemRed).setStroke()
             path.stroke()
         }
     }

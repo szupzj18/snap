@@ -38,6 +38,8 @@ public final class AppSettings: ObservableObject {
         static let recordingShowsCursor = "recordingShowsCursor"
         static let playSound = "playSound"
         static let checkForUpdates = "checkForUpdates"
+        static let recordSystemAudio = "recordSystemAudio"
+        static let recordMicrophone = "recordMicrophone"
     }
 
     private let defaults: UserDefaults
@@ -87,6 +89,16 @@ public final class AppSettings: ObservableObject {
         didSet { defaults.set(playSound, forKey: Key.playSound) }
     }
 
+    /// Record the sound playing on the Mac with screen recordings.
+    @Published public var recordSystemAudio: Bool {
+        didSet { defaults.set(recordSystemAudio, forKey: Key.recordSystemAudio) }
+    }
+
+    /// Record the default microphone with screen recordings (mixed with system audio).
+    @Published public var recordMicrophone: Bool {
+        didSet { defaults.set(recordMicrophone, forKey: Key.recordMicrophone) }
+    }
+
     /// Look for a newer release on GitHub once a day.
     @Published public var checkForUpdates: Bool {
         didSet { defaults.set(checkForUpdates, forKey: Key.checkForUpdates) }
@@ -111,6 +123,8 @@ public final class AppSettings: ObservableObject {
         recordingShowsCursor = defaults.object(forKey: Key.recordingShowsCursor) as? Bool ?? true
         playSound = defaults.object(forKey: Key.playSound) as? Bool ?? true
         checkForUpdates = defaults.object(forKey: Key.checkForUpdates) as? Bool ?? true
+        recordSystemAudio = defaults.bool(forKey: Key.recordSystemAudio)
+        recordMicrophone = defaults.bool(forKey: Key.recordMicrophone)
     }
 
     public func filename(for capture: Capture) -> String {

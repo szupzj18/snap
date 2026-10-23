@@ -30,6 +30,8 @@
 	<true/>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Snap records your microphone during screen recordings when you turn that on in Settings.</string>
 	<key>SnapReleasesRepository</key>
 	<string>szupzj18/snap</string>
 	<key>NSHumanReadableCopyright</key>
