@@ -30,6 +30,8 @@
 	<true/>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>SnapReleasesRepository</key>
+	<string>szupzj18/snap</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>MIT License</string>
 </dict>

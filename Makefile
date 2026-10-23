@@ -8,7 +8,7 @@ unexport SDKROOT
 CONFIG ?= debug
 APP := build/Snap.app
 
-.PHONY: build app run test ui-snapshots clean
+.PHONY: build app run test ui-snapshots dmg clean
 
 build:
 	swift build -c $(CONFIG)
@@ -29,6 +29,11 @@ ui-snapshots:
 	rm -rf build/ui-snapshots
 	SNAP_UI_SNAPSHOTS=1 SNAP_UI_SNAPSHOTS_DIR=$(CURDIR)/build/ui-snapshots swift test --filter SnapUISnapshots
 	@ls build/ui-snapshots
+
+# Release build packed as build/Snap-<version>.dmg. Set VERSION, and for a distributable
+# build SIGN_IDENTITY="Developer ID Application: ..." and NOTARY_PROFILE (see scripts/package.sh).
+dmg:
+	scripts/package.sh
 
 clean:
 	swift package clean

@@ -10,19 +10,23 @@ final class StatusItemController: NSObject {
     private let settingsWindow: SettingsWindowController
     private let historyWindow: HistoryWindowController
     private let recording: RecordingController
+    private let updates: UpdateChecker
     private lazy var mainMenu = makeMenu()
+    private var updateItems: [NSMenuItem] = []
     private var recordingTimer: Timer?
 
     init(
         coordinator: CaptureCoordinator,
         settingsWindow: SettingsWindowController,
         historyWindow: HistoryWindowController,
-        recording: RecordingController
+        recording: RecordingController,
+        updates: UpdateChecker
     ) {
         self.coordinator = coordinator
         self.settingsWindow = settingsWindow
         self.historyWindow = historyWindow
         self.recording = recording
+        self.updates = updates
         super.init()
         showIdle()
     }
@@ -97,12 +101,34 @@ final class StatusItemController: NSObject {
         let history = NSMenuItem(title: "History…", action: #selector(openHistory), keyEquivalent: "")
         history.target = self
         menu.addItem(history)
+        let checkForUpdates = NSMenuItem(title: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "")
+        checkForUpdates.target = self
+        menu.addItem(checkForUpdates)
         let settings = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
         settings.target = self
         menu.addItem(settings)
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit Snap", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         return menu
+    }
+
+    /// Puts "Snap x.y.z Is Available…" at the top of the menu, or removes it.
+    func showUpdate(_ release: GitHubRelease?) {
+        updateItems.forEach { mainMenu.removeItem($0) }
+        updateItems = []
+        guard let release else { return }
+        let item = ClosureMenuItem(title: "Snap \(release.version) Is Available…") { [weak self] in
+            self?.updates.offer(release)
+        }
+        item.image = NSImage(systemSymbolName: "arrow.down.circle.fill", accessibilityDescription: nil)
+        let separator = NSMenuItem.separator()
+        mainMenu.insertItem(separator, at: 0)
+        mainMenu.insertItem(item, at: 0)
+        updateItems = [item, separator]
+    }
+
+    @objc private func checkForUpdates() {
+        Task { await updates.check(userInitiated: true) }
     }
 
     @objc private func openHistory() {
