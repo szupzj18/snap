@@ -13,6 +13,7 @@ final class CaptureCoordinator {
     private let actions: CaptureActions
     /// Set once the app is wired up; recordings run outside the one-capture-at-a-time flow.
     var recording: RecordingController?
+    var scrolling: ScrollingCaptureController?
     private var isCapturing = false
 
     init(settings: AppSettings, onboarding: PermissionOnboardingController, router: PostCaptureRouter, actions: CaptureActions) {
@@ -23,8 +24,13 @@ final class CaptureCoordinator {
     }
 
     func start(_ mode: CaptureMode) {
+        // These run their own sessions, and the same shortcut finishes them.
         if mode == .recording {
             recording?.toggle()
+            return
+        }
+        if mode == .scrolling {
+            scrolling?.toggle()
             return
         }
         guard !isCapturing else { return }
@@ -61,7 +67,7 @@ final class CaptureCoordinator {
             return await AreaSelectionSession(mode: mode).run(snapshots: snapshots)
         case .window:
             return try await captureWindow()
-        case .recording:
+        case .recording, .scrolling:
             return nil
         }
     }

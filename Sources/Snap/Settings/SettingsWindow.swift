@@ -139,6 +139,7 @@ private struct ShortcutSettingsView: View {
                 KeyboardShortcuts.Recorder("Capture Window", name: .captureWindow)
                 KeyboardShortcuts.Recorder("Capture Fullscreen", name: .captureFullscreen)
                 KeyboardShortcuts.Recorder("Capture Text (OCR)", name: .captureText)
+                KeyboardShortcuts.Recorder("Capture Scrolling", name: .captureScrolling)
                 KeyboardShortcuts.Recorder("Record Screen", name: .recordScreen)
             } footer: {
                 Text("⌘⇧3, ⌘⇧4 and ⌘⇧5 belong to macOS. To use them for Snap, first turn them off in System Settings › Keyboard › Keyboard Shortcuts › Screenshots.")

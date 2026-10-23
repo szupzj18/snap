@@ -7,6 +7,8 @@ public enum CaptureMode: String, CaseIterable, Sendable {
     case fullscreen
     /// Select an area and copy the text in it (OCR) instead of keeping the image.
     case text
+    /// Select an area, scroll its content, and get one tall image.
+    case scrolling
     /// Select an area and record a video of it.
     case recording
 
@@ -16,6 +18,7 @@ public enum CaptureMode: String, CaseIterable, Sendable {
         case .window: "Window"
         case .fullscreen: "Fullscreen"
         case .text: "Text"
+        case .scrolling: "Scrolling"
         case .recording: "Recording"
         }
     }

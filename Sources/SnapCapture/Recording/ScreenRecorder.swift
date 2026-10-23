@@ -34,14 +34,7 @@ public final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
 
     /// Starts recording `rect` (Quartz global points) on `displayID` into `url`.
     public func start(displayID: CGDirectDisplayID, rect: CGRect, options: Options, to url: URL) async throws {
-        let content = try await service.shareableContent()
-        guard let display = content.displays.first(where: { $0.displayID == displayID }) else {
-            throw CaptureError.displayNotFound
-        }
-        let filter = SCContentFilter(display: display, excludingWindows: service.ownWindows(in: content))
-        let local = rect.offsetBy(dx: -display.frame.minX, dy: -display.frame.minY)
-            .intersection(CGRect(origin: .zero, size: display.frame.size))
-        guard local.width >= 2, local.height >= 2 else { throw CaptureError.displayNotFound }
+        let (filter, local) = try await service.areaFilter(displayID: displayID, rect: rect)
         let size = Self.pixelSize(for: local.size, scale: CGFloat(filter.pointPixelScale))
         scale = CGFloat(size.width) / local.width
 
@@ -111,7 +104,7 @@ public final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
     }
 
     /// ScreenCaptureKit also sends status-only buffers (e.g. "idle" when nothing changed).
-    private static func isCompleteFrame(_ sampleBuffer: CMSampleBuffer) -> Bool {
+    static func isCompleteFrame(_ sampleBuffer: CMSampleBuffer) -> Bool {
         guard let attachments = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer, createIfNecessary: false) as? [[SCStreamFrameInfo: Any]],
               let rawStatus = attachments.first?[.status] as? Int,
               let status = SCFrameStatus(rawValue: rawStatus) else { return false }

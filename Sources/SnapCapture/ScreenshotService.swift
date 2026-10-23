@@ -66,6 +66,20 @@ public final class ScreenshotService {
         return DisplaySnapshot(displayID: display.displayID, frame: display.frame, scale: scale, image: image)
     }
 
+    /// A filter for one display without our own windows, plus `rect` (Quartz global points)
+    /// in that display's local coordinates, for streams that capture part of a display.
+    func areaFilter(displayID: CGDirectDisplayID, rect: CGRect) async throws -> (filter: SCContentFilter, localRect: CGRect) {
+        let content = try await shareableContent()
+        guard let display = content.displays.first(where: { $0.displayID == displayID }) else {
+            throw CaptureError.displayNotFound
+        }
+        let filter = SCContentFilter(display: display, excludingWindows: ownWindows(in: content))
+        let local = rect.offsetBy(dx: -display.frame.minX, dy: -display.frame.minY)
+            .intersection(CGRect(origin: .zero, size: display.frame.size))
+        guard local.width >= 2, local.height >= 2 else { throw CaptureError.displayNotFound }
+        return (filter, local)
+    }
+
     func shareableContent() async throws -> SCShareableContent {
         try await mapErrors {
             try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)

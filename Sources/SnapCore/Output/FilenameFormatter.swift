@@ -8,7 +8,7 @@ public enum FilenameFormatter {
     public static let tokens: [(token: String, meaning: String)] = [
         ("{date}", "Date, e.g. 2026-10-22"),
         ("{time}", "Time, e.g. 15.04.05"),
-        ("{mode}", "Capture mode: Area, Window, Fullscreen or Recording"),
+        ("{mode}", "Capture mode: Area, Window, Fullscreen, Scrolling or Recording"),
         ("{app}", "App name for window captures"),
     ]
 

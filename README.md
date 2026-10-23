@@ -20,6 +20,9 @@ Retina scaling.
 - **Capture text (OCR)**: select an area and its text goes to the clipboard, recognized on
   your Mac with the Vision framework (English, Chinese and more; table rows keep their cells
   tab-separated). Also available on any Quick Access preview.
+- **Scrolling capture**: select an area, scroll through it (trackpad or wheel, at your own pace),
+  click Done, and get one tall image. Fixed headers stay at the top and fixed footers appear
+  once at the bottom.
 - **Screen recording**: select an area and record it to MP4 (H.264, Retina resolution,
   15/30/60 fps, pointer optional). The menu bar icon becomes a stop button with a timer.
   Turn any recording into a looping GIF from its Quick Access preview.
@@ -42,6 +45,7 @@ Retina scaling.
 | Capture window | ⌥⇧5 |
 | Capture fullscreen (display under the pointer) | ⌥⇧3 |
 | Capture text (OCR) | ⌥⇧2 |
+| Capture scrolling (press again to finish) | ⌥⇧7 |
 | Record screen (press again to stop) | ⌥⇧6 |
 
 All of them can be changed in Settings › Shortcuts. The defaults stay off macOS's own ⌘⇧3/4/5;
@@ -115,7 +119,6 @@ spaces and is unit-tested.
 
 Planned for after the MVP, with the extension points already in place:
 
-- Scrolling capture: a new `CaptureMode`, reusing area selection.
 - Upload and sharing.
 
 ## Icon

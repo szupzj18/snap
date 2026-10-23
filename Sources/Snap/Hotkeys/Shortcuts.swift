@@ -7,6 +7,7 @@ extension KeyboardShortcuts.Name {
     static let captureWindow = Self("captureWindow", default: .init(.five, modifiers: [.option, .shift]))
     static let captureFullscreen = Self("captureFullscreen", default: .init(.three, modifiers: [.option, .shift]))
     static let captureText = Self("captureText", default: .init(.two, modifiers: [.option, .shift]))
+    static let captureScrolling = Self("captureScrolling", default: .init(.seven, modifiers: [.option, .shift]))
     static let recordScreen = Self("recordScreen", default: .init(.six, modifiers: [.option, .shift]))
 }
 
@@ -17,6 +18,7 @@ extension CaptureMode {
         case .window: .captureWindow
         case .fullscreen: .captureFullscreen
         case .text: .captureText
+        case .scrolling: .captureScrolling
         case .recording: .recordScreen
         }
     }
