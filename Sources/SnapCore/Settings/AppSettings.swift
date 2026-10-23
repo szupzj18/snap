@@ -36,6 +36,7 @@ public final class AppSettings: ObservableObject {
         static let historyLimit = "historyLimit"
         static let recordingFPS = "recordingFPS"
         static let recordingShowsCursor = "recordingShowsCursor"
+        static let playSound = "playSound"
     }
 
     private let defaults: UserDefaults
@@ -80,6 +81,11 @@ public final class AppSettings: ObservableObject {
         didSet { defaults.set(recordingShowsCursor, forKey: Key.recordingShowsCursor) }
     }
 
+    /// Play the system screenshot sound when a capture is taken.
+    @Published public var playSound: Bool {
+        didSet { defaults.set(playSound, forKey: Key.playSound) }
+    }
+
     public static let defaultSaveDirectory = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask)[0]
     public static let defaultAfterCapture: Set<AfterCaptureAction> = [.showQuickAccess, .save]
 
@@ -97,6 +103,7 @@ public final class AppSettings: ObservableObject {
         historyLimit = defaults.object(forKey: Key.historyLimit) as? Int ?? 50
         recordingFPS = defaults.object(forKey: Key.recordingFPS) as? Int ?? 30
         recordingShowsCursor = defaults.object(forKey: Key.recordingShowsCursor) as? Bool ?? true
+        playSound = defaults.object(forKey: Key.playSound) as? Bool ?? true
     }
 
     public func filename(for capture: Capture) -> String {

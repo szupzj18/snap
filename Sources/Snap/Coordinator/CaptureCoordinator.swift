@@ -44,6 +44,7 @@ final class CaptureCoordinator {
             do {
                 guard let capture = try await capture(mode) else { return }
                 if mode == .text {
+                    if settings.playSound { CaptureSound.play() }
                     await actions.copyText(from: capture)
                 } else {
                     router.handle(capture)

@@ -28,6 +28,7 @@ final class PostCaptureRouter {
     }
 
     func handle(_ capture: Capture) {
+        if settings.playSound { CaptureSound.play() }
         if settings.historyEnabled {
             Task { [history] in
                 do { try await history.add(capture) } catch { NSLog("Snap: couldn't add capture to history: \(error)") }
@@ -53,6 +54,18 @@ final class PostCaptureRouter {
         }
         if enabled.contains(.showQuickAccess) {
             quickAccess.show(capture, savedURL: savedURL)
+        } else {
+            confirmWithoutQuickAccess(saved: savedURL, copied: enabled.contains(.copyToClipboard))
+        }
+    }
+
+    /// Without the preview, a silent save or copy would leave the user guessing.
+    private func confirmWithoutQuickAccess(saved: URL?, copied: Bool) {
+        switch (saved, copied) {
+        case let (url?, true): Toast.show("Saved \(url.lastPathComponent) and copied", systemImage: "checkmark.circle")
+        case let (url?, false): Toast.show("Saved \(url.lastPathComponent)", systemImage: "checkmark.circle")
+        case (nil, true): Toast.show("Copied to clipboard", systemImage: "doc.on.clipboard")
+        case (nil, false): break
         }
     }
 
@@ -75,6 +88,8 @@ final class PostCaptureRouter {
         }
         if enabled.contains(.showQuickAccess) {
             quickAccess.show(recording, saved: saved)
+        } else {
+            confirmWithoutQuickAccess(saved: saved ? recording.url : nil, copied: enabled.contains(.copyToClipboard))
         }
     }
 }
