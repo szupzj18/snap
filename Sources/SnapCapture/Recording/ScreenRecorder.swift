@@ -7,10 +7,15 @@ public final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
     public struct Options {
         public var fps: Int
         public var showsCursor: Bool
+        /// Sound playing on the Mac (not Snap's own).
+        public var systemAudio: Bool
+        public var microphone: Bool
 
-        public init(fps: Int = 30, showsCursor: Bool = true) {
+        public init(fps: Int = 30, showsCursor: Bool = true, systemAudio: Bool = false, microphone: Bool = false) {
             self.fps = fps
             self.showsCursor = showsCursor
+            self.systemAudio = systemAudio
+            self.microphone = microphone
         }
     }
 
@@ -20,7 +25,9 @@ public final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
     private let service: ScreenshotService
     private let queue = DispatchQueue(label: "Snap.ScreenRecorder")
     private var stream: SCStream?
-    private var writer: VideoFileWriter?
+    private var writer: MovieWriter?
+    private var microphone: MicrophoneCapture?
+    private var hasTwoAudioTracks = false
     private var outputURL: URL?
     /// Called on the main queue if the stream stops by itself (e.g. the display went away).
     public var onUnexpectedStop: ((Error) -> Void)?
@@ -34,6 +41,9 @@ public final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
 
     /// Starts recording `rect` (Quartz global points) on `displayID` into `url`.
     public func start(displayID: CGDirectDisplayID, rect: CGRect, options: Options, to url: URL) async throws {
+        if options.microphone, !(await MicrophoneCapture.requestAccess()) {
+            throw RecordingError.microphoneDenied
+        }
         let (filter, local) = try await service.areaFilter(displayID: displayID, rect: rect)
         let size = Self.pixelSize(for: local.size, scale: CGFloat(filter.pointPixelScale))
         scale = CGFloat(size.width) / local.width
@@ -46,31 +56,68 @@ public final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
         configuration.showsCursor = options.showsCursor
         configuration.pixelFormat = kCVPixelFormatType_32BGRA
         configuration.queueDepth = 6
-        configuration.capturesAudio = false
+        configuration.capturesAudio = options.systemAudio
+        if options.systemAudio {
+            configuration.sampleRate = 48_000
+            configuration.channelCount = 2
+            configuration.excludesCurrentProcessAudio = true
+        }
 
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-        let writer = try VideoFileWriter(url: url, width: size.width, height: size.height, fps: options.fps)
+        var audioTracks: [MovieWriter.Track] = []
+        if options.systemAudio { audioTracks.append(.systemAudio) }
+        if options.microphone { audioTracks.append(.microphone) }
+        hasTwoAudioTracks = audioTracks.count == 2
+        let writer = try MovieWriter(url: url, width: size.width, height: size.height, fps: options.fps, audioTracks: audioTracks)
         let stream = SCStream(filter: filter, configuration: configuration, delegate: self)
         try stream.addStreamOutput(self, type: .screen, sampleHandlerQueue: queue)
+        if options.systemAudio {
+            try stream.addStreamOutput(self, type: .audio, sampleHandlerQueue: queue)
+        }
+        if options.microphone {
+            // Same queue as the stream, so the writer is only ever touched from one place.
+            microphone = try MicrophoneCapture(queue: queue) { [weak self] sample in
+                self?.writer?.append(sample, to: .microphone)
+            }
+        }
         self.writer = writer
         self.stream = stream
         outputURL = url
         try await service.mapErrors { try await stream.startCapture() }
+        microphone?.start()
     }
 
     /// Stops and returns the finished movie.
     public func stop() async throws -> URL {
         guard let stream, let outputURL else { throw RecordingError.writeFailed }
         try? await stream.stopCapture()
+        microphone?.stop()
+        microphone = nil
         let end = CMClockGetTime(CMClockGetHostTimeClock())
         self.stream = nil
         try await finishWriter(at: end)
+        if hasTwoAudioTracks {
+            try await AudioMixdown.mergeAudioTracks(in: outputURL)
+        }
         return outputURL
+    }
+
+    /// Stops taking frames and sound until `resume()`; the pause leaves no gap in the movie.
+    public func pause() {
+        let now = CMClockGetTime(CMClockGetHostTimeClock())
+        queue.async { self.writer?.pause(at: now) }
+    }
+
+    public func resume() {
+        let now = CMClockGetTime(CMClockGetHostTimeClock())
+        queue.async { self.writer?.resume(at: now) }
     }
 
     /// Stops and throws the recording away.
     public func cancel() async {
         try? await stream?.stopCapture()
+        microphone?.stop()
+        microphone = nil
         stream = nil
         queue.sync { writer?.cancel() }
         writer = nil
@@ -90,7 +137,7 @@ public final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
 
     private func finishWriter(at end: CMTime) async throws {
         // All frames are appended on `queue`; finish there too, after any frame in flight.
-        let writer: VideoFileWriter? = queue.sync { self.writer }
+        let writer: MovieWriter? = queue.sync { self.writer }
         self.writer = nil
         guard let writer else { throw RecordingError.writeFailed }
         try await writer.finish(at: end)
@@ -99,8 +146,16 @@ public final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
     // MARK: SCStreamOutput
 
     public func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of type: SCStreamOutputType) {
-        guard type == .screen, sampleBuffer.isValid, Self.isCompleteFrame(sampleBuffer) else { return }
-        writer?.append(sampleBuffer)
+        guard sampleBuffer.isValid else { return }
+        switch type {
+        case .screen:
+            guard Self.isCompleteFrame(sampleBuffer) else { return }
+            writer?.append(sampleBuffer, to: .video)
+        case .audio:
+            writer?.append(sampleBuffer, to: .systemAudio)
+        default:
+            break
+        }
     }
 
     /// ScreenCaptureKit also sends status-only buffers (e.g. "idle" when nothing changed).

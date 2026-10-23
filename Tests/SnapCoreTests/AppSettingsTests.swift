@@ -29,6 +29,8 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertTrue(settings.recordingShowsCursor)
         XCTAssertTrue(settings.playSound)
         XCTAssertTrue(settings.checkForUpdates)
+        XCTAssertFalse(settings.recordSystemAudio)
+        XCTAssertFalse(settings.recordMicrophone)
     }
 
     func testValuesPersist() {
@@ -44,6 +46,8 @@ final class AppSettingsTests: XCTestCase {
         settings.recordingShowsCursor = false
         settings.playSound = false
         settings.checkForUpdates = false
+        settings.recordSystemAudio = true
+        settings.recordMicrophone = true
 
         let reloaded = AppSettings(defaults: defaults)
         XCTAssertEqual(reloaded.saveDirectory.path, "/tmp/shots")
@@ -57,6 +61,8 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertFalse(reloaded.recordingShowsCursor)
         XCTAssertFalse(reloaded.playSound)
         XCTAssertFalse(reloaded.checkForUpdates)
+        XCTAssertTrue(reloaded.recordSystemAudio)
+        XCTAssertTrue(reloaded.recordMicrophone)
     }
 
     func testEmptyActionSetIsKept() {

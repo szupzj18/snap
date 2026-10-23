@@ -138,6 +138,8 @@ private struct CaptureSettingsView: View {
                     ForEach([15, 30, 60], id: \.self) { Text("\($0) fps").tag($0) }
                 }
                 Toggle("Show the pointer", isOn: $settings.recordingShowsCursor)
+                Toggle("Record sound from the Mac", isOn: $settings.recordSystemAudio)
+                Toggle("Record the microphone", isOn: $settings.recordMicrophone)
             }
 
             Section("Window capture") {

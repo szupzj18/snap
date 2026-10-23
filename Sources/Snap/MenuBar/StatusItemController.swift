@@ -33,23 +33,27 @@ final class StatusItemController: NSObject {
 
     // MARK: Recording state
 
-    /// While recording, the icon turns into a stop button with the elapsed time.
+    /// While recording, the icon turns into a stop button with the elapsed time; while paused,
+    /// a pause symbol with the time standing still.
     func update(for state: RecordingController.State) {
         recordingTimer?.invalidate()
         recordingTimer = nil
-        guard case let .recording(since) = state else {
+        guard state == .recording || state == .paused else {
             showIdle()
             return
         }
-        statusItem.menu = makeRecordingMenu()
+        let paused = state == .paused
+        statusItem.menu = makeRecordingMenu(paused: paused)
         guard let button = statusItem.button else { return }
-        button.image = NSImage(systemSymbolName: "stop.circle.fill", accessibilityDescription: "Stop recording")
+        button.image = NSImage(systemSymbolName: paused ? "pause.circle.fill" : "stop.circle.fill",
+                               accessibilityDescription: paused ? "Recording paused" : "Stop recording")
         button.image?.isTemplate = true
         button.imagePosition = .imageLeading
-        let tick = { [weak button] in
-            button?.title = " " + Recording.formatDuration(Date().timeIntervalSince(since))
+        let tick = { [weak button, recording] in
+            button?.title = " " + Recording.formatDuration(recording.elapsed)
         }
         tick()
+        guard !paused else { return }
         recordingTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
             MainActor.assumeIsolated { tick() }
         }
@@ -63,12 +67,15 @@ final class StatusItemController: NSObject {
         button.imagePosition = .imageOnly
     }
 
-    private func makeRecordingMenu() -> NSMenu {
+    private func makeRecordingMenu(paused: Bool) -> NSMenu {
         let menu = NSMenu()
         let stop = NSMenuItem(title: "Stop Recording", action: #selector(stopRecording), keyEquivalent: "")
         stop.target = self
         stop.setShortcut(for: .recordScreen)
         menu.addItem(stop)
+        let pause = NSMenuItem(title: paused ? "Resume Recording" : "Pause Recording", action: #selector(togglePause), keyEquivalent: "")
+        pause.target = self
+        menu.addItem(pause)
         let cancel = NSMenuItem(title: "Cancel Recording", action: #selector(cancelRecording), keyEquivalent: "")
         cancel.target = self
         menu.addItem(cancel)
@@ -77,6 +84,10 @@ final class StatusItemController: NSObject {
 
     @objc private func stopRecording() {
         recording.toggle()
+    }
+
+    @objc private func togglePause() {
+        recording.togglePause()
     }
 
     @objc private func cancelRecording() {

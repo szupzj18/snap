@@ -5,5 +5,8 @@
 	<!-- Not sandboxed: the user picks any save folder and we write there directly. -->
 	<key>com.apple.security.app-sandbox</key>
 	<false/>
+	<!-- Hardened runtime: needed to record the microphone during screen recordings. -->
+	<key>com.apple.security.device.audio-input</key>
+	<true/>
 </dict>
 </plist>
