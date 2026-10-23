@@ -29,6 +29,8 @@ let package = Package(
         ),
         .testTarget(name: "SnapCoreTests", dependencies: ["SnapCore"]),
         .testTarget(name: "SnapAnnotateTests", dependencies: ["SnapAnnotate"]),
+        // Renders windows and overlays offscreen to PNGs (`make ui-snapshots`); skipped otherwise.
+        .testTarget(name: "SnapUISnapshots", dependencies: ["Snap", "SnapCore", "SnapCapture", "SnapAnnotate"]),
         // Takes real screenshots; skipped unless SNAP_INTEGRATION=1 (needs Screen Recording access).
         .testTarget(name: "SnapCaptureTests", dependencies: ["SnapCapture"]),
     ]

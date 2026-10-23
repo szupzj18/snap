@@ -8,7 +8,7 @@ unexport SDKROOT
 CONFIG ?= debug
 APP := build/Snap.app
 
-.PHONY: build app run test clean
+.PHONY: build app run test ui-snapshots clean
 
 build:
 	swift build -c $(CONFIG)
@@ -22,6 +22,13 @@ run: app
 
 test:
 	swift test
+
+# Renders windows and overlays offscreen to build/ui-snapshots/*.png, to review UI changes.
+# Needs Screen Recording access for the terminal running it; nothing appears on screen.
+ui-snapshots:
+	rm -rf build/ui-snapshots
+	SNAP_UI_SNAPSHOTS=1 SNAP_UI_SNAPSHOTS_DIR=$(CURDIR)/build/ui-snapshots swift test --filter SnapUISnapshots
+	@ls build/ui-snapshots
 
 clean:
 	swift package clean
