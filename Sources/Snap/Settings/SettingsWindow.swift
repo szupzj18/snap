@@ -23,6 +23,8 @@ struct SettingsView: View {
         TabView {
             GeneralSettingsView(settings: settings)
                 .tabItem { Label("General", systemImage: "gearshape") }
+            CaptureSettingsView(settings: settings)
+                .tabItem { Label("Capture", systemImage: "camera.viewfinder") }
             ShortcutSettingsView()
                 .tabItem { Label("Shortcuts", systemImage: "keyboard") }
         }
@@ -37,6 +39,11 @@ private struct GeneralSettingsView: View {
 
     var body: some View {
         Form {
+            Section("General") {
+                LaunchAtLoginToggle()
+                Toggle("Play a sound when capturing", isOn: $settings.playSound)
+            }
+
             Section("Saving") {
                 LabeledContent("Folder") {
                     HStack {
@@ -67,25 +74,6 @@ private struct GeneralSettingsView: View {
                     }
                 }
                 .disabled(!settings.afterCapture.contains(.showQuickAccess))
-            }
-
-            Section("History") {
-                Toggle("Keep a history of captures", isOn: $settings.historyEnabled)
-                Picker("Keep the last", selection: $settings.historyLimit) {
-                    ForEach([20, 50, 100, 200], id: \.self) { Text("\($0) captures").tag($0) }
-                }
-                .disabled(!settings.historyEnabled)
-            }
-
-            Section("Recording") {
-                Picker("Frame rate", selection: $settings.recordingFPS) {
-                    ForEach([15, 30, 60], id: \.self) { Text("\($0) fps").tag($0) }
-                }
-                Toggle("Show the pointer", isOn: $settings.recordingShowsCursor)
-            }
-
-            Section("Window capture") {
-                Toggle("Add shadow", isOn: $settings.windowShadow)
             }
 
             Section("Permissions") {
@@ -128,6 +116,34 @@ private struct GeneralSettingsView: View {
         if panel.runModal() == .OK, let url = panel.url {
             settings.saveDirectory = url
         }
+    }
+}
+
+private struct CaptureSettingsView: View {
+    @ObservedObject var settings: AppSettings
+
+    var body: some View {
+        Form {
+            Section("History") {
+                Toggle("Keep a history of captures", isOn: $settings.historyEnabled)
+                Picker("Keep the last", selection: $settings.historyLimit) {
+                    ForEach([20, 50, 100, 200], id: \.self) { Text("\($0) captures").tag($0) }
+                }
+                .disabled(!settings.historyEnabled)
+            }
+
+            Section("Recording") {
+                Picker("Frame rate", selection: $settings.recordingFPS) {
+                    ForEach([15, 30, 60], id: \.self) { Text("\($0) fps").tag($0) }
+                }
+                Toggle("Show the pointer", isOn: $settings.recordingShowsCursor)
+            }
+
+            Section("Window capture") {
+                Toggle("Add shadow", isOn: $settings.windowShadow)
+            }
+        }
+        .formStyle(.grouped)
     }
 }
 

@@ -75,7 +75,10 @@ final class QuickAccessController {
         QuickAccessHandlers(
             copy: { [weak self, weak item] in
                 guard let self, let item else { return }
-                self.perform { try self.actions.copy(item.capture) }
+                self.perform {
+                    try self.actions.copy(item.capture)
+                    Toast.show("Copied", systemImage: "doc.on.clipboard")
+                }
                 self.close(item)
             },
             save: { [weak self, weak item] in
@@ -83,7 +86,11 @@ final class QuickAccessController {
                 if let url = item.savedURL {
                     self.actions.revealInFinder(url)
                 } else {
-                    self.perform { item.savedURL = try self.actions.save(item.capture) }
+                    self.perform {
+                        let url = try self.actions.save(item.capture)
+                        item.savedURL = url
+                        Toast.show("Saved \(url.lastPathComponent)", systemImage: "checkmark.circle")
+                    }
                 }
                 self.close(item)
             },
@@ -130,7 +137,11 @@ final class QuickAccessController {
                 if let url = item.savedURL {
                     self.actions.revealInFinder(url)
                 } else {
-                    self.perform { item.savedURL = try self.actions.saveRecording(recording) }
+                    self.perform {
+                        let url = try self.actions.saveRecording(recording)
+                        item.savedURL = url
+                        Toast.show("Saved \(url.lastPathComponent)", systemImage: "checkmark.circle")
+                    }
                 }
                 self.close(item)
             },
