@@ -11,6 +11,8 @@ final class CaptureCoordinator {
     private let onboarding: PermissionOnboardingController
     private let router: PostCaptureRouter
     private let actions: CaptureActions
+    /// Set once the app is wired up; recordings run outside the one-capture-at-a-time flow.
+    var recording: RecordingController?
     private var isCapturing = false
 
     init(settings: AppSettings, onboarding: PermissionOnboardingController, router: PostCaptureRouter, actions: CaptureActions) {
@@ -21,6 +23,10 @@ final class CaptureCoordinator {
     }
 
     func start(_ mode: CaptureMode) {
+        if mode == .recording {
+            recording?.toggle()
+            return
+        }
         guard !isCapturing else { return }
         guard ScreenRecordingPermission.isGranted else {
             onboarding.show()
@@ -55,6 +61,8 @@ final class CaptureCoordinator {
             return await AreaSelectionSession(mode: mode).run(snapshots: snapshots)
         case .window:
             return try await captureWindow()
+        case .recording:
+            return nil
         }
     }
 

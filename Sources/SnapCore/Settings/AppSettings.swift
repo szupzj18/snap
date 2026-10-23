@@ -34,6 +34,8 @@ public final class AppSettings: ObservableObject {
         static let quickAccessAutoClose = "quickAccessAutoClose"
         static let historyEnabled = "historyEnabled"
         static let historyLimit = "historyLimit"
+        static let recordingFPS = "recordingFPS"
+        static let recordingShowsCursor = "recordingShowsCursor"
     }
 
     private let defaults: UserDefaults
@@ -70,6 +72,14 @@ public final class AppSettings: ObservableObject {
         didSet { defaults.set(historyLimit, forKey: Key.historyLimit) }
     }
 
+    @Published public var recordingFPS: Int {
+        didSet { defaults.set(recordingFPS, forKey: Key.recordingFPS) }
+    }
+
+    @Published public var recordingShowsCursor: Bool {
+        didSet { defaults.set(recordingShowsCursor, forKey: Key.recordingShowsCursor) }
+    }
+
     public static let defaultSaveDirectory = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask)[0]
     public static let defaultAfterCapture: Set<AfterCaptureAction> = [.showQuickAccess, .save]
 
@@ -85,6 +95,8 @@ public final class AppSettings: ObservableObject {
         quickAccessAutoClose = defaults.object(forKey: Key.quickAccessAutoClose) as? TimeInterval ?? 5
         historyEnabled = defaults.object(forKey: Key.historyEnabled) as? Bool ?? true
         historyLimit = defaults.object(forKey: Key.historyLimit) as? Int ?? 50
+        recordingFPS = defaults.object(forKey: Key.recordingFPS) as? Int ?? 30
+        recordingShowsCursor = defaults.object(forKey: Key.recordingShowsCursor) as? Bool ?? true
     }
 
     public func filename(for capture: Capture) -> String {

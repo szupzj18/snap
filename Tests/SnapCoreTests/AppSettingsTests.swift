@@ -25,6 +25,8 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertEqual(settings.quickAccessAutoClose, 5)
         XCTAssertTrue(settings.historyEnabled)
         XCTAssertEqual(settings.historyLimit, 50)
+        XCTAssertEqual(settings.recordingFPS, 30)
+        XCTAssertTrue(settings.recordingShowsCursor)
     }
 
     func testValuesPersist() {
@@ -36,6 +38,8 @@ final class AppSettingsTests: XCTestCase {
         settings.quickAccessAutoClose = 0
         settings.historyEnabled = false
         settings.historyLimit = 200
+        settings.recordingFPS = 60
+        settings.recordingShowsCursor = false
 
         let reloaded = AppSettings(defaults: defaults)
         XCTAssertEqual(reloaded.saveDirectory.path, "/tmp/shots")
@@ -45,6 +49,8 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertEqual(reloaded.quickAccessAutoClose, 0)
         XCTAssertFalse(reloaded.historyEnabled)
         XCTAssertEqual(reloaded.historyLimit, 200)
+        XCTAssertEqual(reloaded.recordingFPS, 60)
+        XCTAssertFalse(reloaded.recordingShowsCursor)
     }
 
     func testEmptyActionSetIsKept() {

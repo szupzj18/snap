@@ -3,16 +3,24 @@ import Combine
 import SnapCore
 import SwiftUI
 
-/// One capture shown in Quick Access.
+/// One capture or recording shown in Quick Access.
 @MainActor
 final class QuickAccessItem: ObservableObject {
+    /// For recordings, a capture of the first frame (sizes and places the card).
     let capture: Capture
+    let recording: Recording?
     @Published var savedURL: URL?
     @Published var isHovered = false
 
-    init(capture: Capture, savedURL: URL?) {
+    init(capture: Capture, savedURL: URL?, recording: Recording? = nil) {
         self.capture = capture
         self.savedURL = savedURL
+        self.recording = recording
+    }
+
+    /// The movie file of a recording: its saved copy, or the temporary one.
+    var videoURL: URL? {
+        recording.map { savedURL ?? $0.url }
     }
 }
 
@@ -35,9 +43,26 @@ final class QuickAccessController {
     }
 
     func show(_ capture: Capture, savedURL: URL?) {
+        present(QuickAccessItem(capture: capture, savedURL: savedURL), handlers: handlers(for:))
+    }
+
+    func show(_ recording: Recording, saved: Bool) {
+        let frame = Capture(
+            image: recording.thumbnail,
+            scale: recording.scale,
+            mode: .recording,
+            sourceRect: recording.sourceRect,
+            displayID: recording.displayID,
+            date: recording.date
+        )
+        present(QuickAccessItem(capture: frame, savedURL: saved ? recording.url : nil, recording: recording),
+                handlers: videoHandlers(for:))
+    }
+
+    private func present(_ item: QuickAccessItem, handlers: (QuickAccessItem) -> QuickAccessHandlers) {
+        let capture = item.capture
         let screen = capture.displayID.flatMap(NSScreen.screen(for:)) ?? NSScreen.underMouse ?? NSScreen.screens[0]
-        let item = QuickAccessItem(capture: capture, savedURL: savedURL)
-        let card = QuickAccessCard(item: item, screen: screen, handlers: handlers(for: item))
+        let card = QuickAccessCard(item: item, screen: screen, handlers: handlers(item))
         cards.append(card)
         if cards.count > maximumCards {
             close(cards[0])
@@ -92,6 +117,46 @@ final class QuickAccessController {
         )
     }
 
+    private func videoHandlers(for item: QuickAccessItem) -> QuickAccessHandlers {
+        QuickAccessHandlers(
+            copy: { [weak self, weak item] in
+                guard let self, let url = item?.videoURL, let item else { return }
+                self.actions.copyFile(url)
+                Toast.show("Copied video", systemImage: "doc.on.clipboard")
+                self.close(item)
+            },
+            save: { [weak self, weak item] in
+                guard let self, let item, let recording = item.recording else { return }
+                if let url = item.savedURL {
+                    self.actions.revealInFinder(url)
+                } else {
+                    self.perform { item.savedURL = try self.actions.saveRecording(recording) }
+                }
+                self.close(item)
+            },
+            // Clicking a recording plays it.
+            edit: { [weak item] in
+                if let url = item?.videoURL { NSWorkspace.shared.open(url) }
+            },
+            copyText: {},
+            pin: {},
+            exportGIF: { [weak self, weak item] in
+                guard let self, let item, let url = item.videoURL else { return }
+                let date = item.capture.date
+                Task { await self.actions.exportGIF(from: url, date: date) }
+            },
+            close: { [weak self, weak item] in
+                guard let self, let item else { return }
+                self.close(item)
+            },
+            fileForDrag: { [weak item] in item?.videoURL },
+            dragEnded: { [weak self, weak item] in
+                guard let self, let item else { return }
+                self.close(item)
+            }
+        )
+    }
+
     private func perform(_ action: () throws -> Void) {
         do { try action() } catch { ErrorPresenter.present(error) }
     }
@@ -134,6 +199,7 @@ struct QuickAccessHandlers {
     let edit: () -> Void
     let copyText: () -> Void
     let pin: () -> Void
+    var exportGIF: () -> Void = {}
     let close: () -> Void
     let fileForDrag: () -> URL?
     let dragEnded: () -> Void

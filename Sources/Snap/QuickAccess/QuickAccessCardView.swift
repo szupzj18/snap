@@ -1,4 +1,5 @@
 import AppKit
+import SnapCore
 import SwiftUI
 
 struct QuickAccessCardView: View {
@@ -9,6 +10,23 @@ struct QuickAccessCardView: View {
         ZStack {
             DragSource(item: item, handlers: handlers)
 
+            if let recording = item.recording, !item.isHovered {
+                VStack {
+                    Spacer()
+                    HStack {
+                        Label(Recording.formatDuration(recording.duration), systemImage: "video.fill")
+                            .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(.black.opacity(0.6), in: Capsule())
+                            .foregroundStyle(.white)
+                        Spacer()
+                    }
+                }
+                .padding(6)
+                .allowsHitTesting(false)
+            }
+
             if item.isHovered {
                 Color.black.opacity(0.4).allowsHitTesting(false)
 
@@ -17,17 +35,33 @@ struct QuickAccessCardView: View {
                     PillButton(title: item.savedURL == nil ? "Save" : "Show in Finder", action: handlers.save)
                 }
 
+                if item.recording != nil {
+                    // Clicking the thumbnail plays the recording; say so.
+                    Image(systemName: "play.circle.fill")
+                        .font(.system(size: 18))
+                        .foregroundStyle(.white.opacity(0.9))
+                        .offset(y: -52)
+                        .allowsHitTesting(false)
+                }
+
                 VStack {
                     HStack {
                         CornerButton(systemImage: "xmark", help: "Close", action: handlers.close)
                         Spacer()
-                        CornerButton(systemImage: "pin.fill", help: "Pin to screen", action: handlers.pin)
+                        if item.recording == nil {
+                            CornerButton(systemImage: "pin.fill", help: "Pin to screen", action: handlers.pin)
+                        }
                     }
                     Spacer()
                     HStack {
-                        CornerButton(systemImage: "pencil", help: "Annotate", action: handlers.edit)
-                        Spacer()
-                        CornerButton(systemImage: "text.viewfinder", help: "Copy text (OCR)", action: handlers.copyText)
+                        if item.recording == nil {
+                            CornerButton(systemImage: "pencil", help: "Annotate", action: handlers.edit)
+                            Spacer()
+                            CornerButton(systemImage: "text.viewfinder", help: "Copy text (OCR)", action: handlers.copyText)
+                        } else {
+                            Spacer()
+                            CornerButton(systemImage: "photo.stack", help: "Save as GIF", action: handlers.exportGIF)
+                        }
                     }
                 }
                 .padding(6)

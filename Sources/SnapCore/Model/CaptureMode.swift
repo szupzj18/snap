@@ -7,6 +7,8 @@ public enum CaptureMode: String, CaseIterable, Sendable {
     case fullscreen
     /// Select an area and copy the text in it (OCR) instead of keeping the image.
     case text
+    /// Select an area and record a video of it.
+    case recording
 
     public var title: String {
         switch self {
@@ -14,6 +16,7 @@ public enum CaptureMode: String, CaseIterable, Sendable {
         case .window: "Window"
         case .fullscreen: "Fullscreen"
         case .text: "Text"
+        case .recording: "Recording"
         }
     }
 }

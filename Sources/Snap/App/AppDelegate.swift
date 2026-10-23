@@ -18,13 +18,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settings: settings, actions: actions, quickAccess: quickAccess, pins: pins, editors: editors, history: history
     )
     private lazy var coordinator = CaptureCoordinator(settings: settings, onboarding: onboarding, router: router, actions: actions)
+    private lazy var recording = RecordingController(
+        settings: settings, service: ScreenshotService(), onboarding: onboarding, router: router
+    )
     private var statusItemController: StatusItemController?
     private var observations: Set<AnyCancellable> = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.mainMenu = MainMenu.make()
-        CaptureActions.removeDragFiles()
-        statusItemController = StatusItemController(coordinator: coordinator, settingsWindow: settingsWindow, historyWindow: historyWindow)
+        CaptureActions.removeTemporaryFiles()
+        coordinator.recording = recording
+        let statusItemController = StatusItemController(
+            coordinator: coordinator, settingsWindow: settingsWindow, historyWindow: historyWindow, recording: recording
+        )
+        self.statusItemController = statusItemController
+        recording.onStateChange = { [weak statusItemController] state in statusItemController?.update(for: state) }
         settings.$historyLimit
             .sink { [weak self] limit in self?.history.limit = limit }
             .store(in: &observations)

@@ -39,6 +39,43 @@ final class CaptureActions {
         }
     }
 
+    // MARK: Recordings
+
+    /// Moves a recording from the temporary folder into the save folder.
+    func saveRecording(_ recording: Recording) throws -> URL {
+        let name = FilenameFormatter.filename(template: settings.filenameTemplate, date: recording.date, mode: .recording)
+        try FileManager.default.createDirectory(at: settings.saveDirectory, withIntermediateDirectories: true)
+        let destination = ImageExporter.uniqueURL(in: settings.saveDirectory, filename: name, pathExtension: "mp4")
+        try FileManager.default.moveItem(at: recording.url, to: destination)
+        return destination
+    }
+
+    /// Puts a file on the clipboard, the way Finder's Copy does.
+    func copyFile(_ url: URL) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.writeObjects([url as NSURL])
+    }
+
+    /// Converts a recording to a GIF next to the other captures.
+    func exportGIF(from videoURL: URL, date: Date) async {
+        Toast.show("Making GIF…", systemImage: "hourglass")
+        do {
+            let name = FilenameFormatter.filename(template: settings.filenameTemplate, date: date, mode: .recording)
+            try FileManager.default.createDirectory(at: settings.saveDirectory, withIntermediateDirectories: true)
+            let gif = ImageExporter.uniqueURL(in: settings.saveDirectory, filename: name, pathExtension: "gif")
+            try await VideoFrames.exportGIF(from: videoURL, to: gif)
+            Toast.show("Saved \(gif.lastPathComponent)", systemImage: "checkmark.circle")
+        } catch {
+            ErrorPresenter.present(error)
+        }
+    }
+
+    /// Recordings wait here until they're saved.
+    static let recordingsDirectory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent(Bundle.main.bundleIdentifier ?? "Snap")
+        .appendingPathComponent("Recordings")
+
     func revealInFinder(_ url: URL) {
         NSWorkspace.shared.activateFileViewerSelecting([url])
     }
@@ -57,7 +94,9 @@ final class CaptureActions {
         .appendingPathComponent(Bundle.main.bundleIdentifier ?? "Snap")
         .appendingPathComponent("Drag")
 
-    static func removeDragFiles() {
+    /// Drag copies and unsaved recordings from an earlier run.
+    static func removeTemporaryFiles() {
         try? FileManager.default.removeItem(at: dragDirectory)
+        try? FileManager.default.removeItem(at: recordingsDirectory)
     }
 }

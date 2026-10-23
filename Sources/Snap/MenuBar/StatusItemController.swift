@@ -5,27 +5,89 @@ import SnapCore
 /// Owns the menu bar icon and its menu.
 @MainActor
 final class StatusItemController: NSObject {
-    private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+    private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let coordinator: CaptureCoordinator
     private let settingsWindow: SettingsWindowController
     private let historyWindow: HistoryWindowController
+    private let recording: RecordingController
+    private lazy var mainMenu = makeMenu()
+    private var recordingTimer: Timer?
 
-    init(coordinator: CaptureCoordinator, settingsWindow: SettingsWindowController, historyWindow: HistoryWindowController) {
+    init(
+        coordinator: CaptureCoordinator,
+        settingsWindow: SettingsWindowController,
+        historyWindow: HistoryWindowController,
+        recording: RecordingController
+    ) {
         self.coordinator = coordinator
         self.settingsWindow = settingsWindow
         self.historyWindow = historyWindow
+        self.recording = recording
         super.init()
-        if let button = statusItem.button {
-            button.image = MenuBarIcon.make()
-        }
-        statusItem.menu = makeMenu()
+        showIdle()
     }
+
+    // MARK: Recording state
+
+    /// While recording, the icon turns into a stop button with the elapsed time.
+    func update(for state: RecordingController.State) {
+        recordingTimer?.invalidate()
+        recordingTimer = nil
+        guard case let .recording(since) = state else {
+            showIdle()
+            return
+        }
+        statusItem.menu = makeRecordingMenu()
+        guard let button = statusItem.button else { return }
+        button.image = NSImage(systemSymbolName: "stop.circle.fill", accessibilityDescription: "Stop recording")
+        button.image?.isTemplate = true
+        button.imagePosition = .imageLeading
+        let tick = { [weak button] in
+            button?.title = " " + Recording.formatDuration(Date().timeIntervalSince(since))
+        }
+        tick()
+        recordingTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+            MainActor.assumeIsolated { tick() }
+        }
+    }
+
+    private func showIdle() {
+        statusItem.menu = mainMenu
+        guard let button = statusItem.button else { return }
+        button.image = MenuBarIcon.make()
+        button.title = ""
+        button.imagePosition = .imageOnly
+    }
+
+    private func makeRecordingMenu() -> NSMenu {
+        let menu = NSMenu()
+        let stop = NSMenuItem(title: "Stop Recording", action: #selector(stopRecording), keyEquivalent: "")
+        stop.target = self
+        stop.setShortcut(for: .recordScreen)
+        menu.addItem(stop)
+        let cancel = NSMenuItem(title: "Cancel Recording", action: #selector(cancelRecording), keyEquivalent: "")
+        cancel.target = self
+        menu.addItem(cancel)
+        return menu
+    }
+
+    @objc private func stopRecording() {
+        recording.toggle()
+    }
+
+    @objc private func cancelRecording() {
+        recording.cancel()
+    }
+
+    // MARK: Menu
 
     private func makeMenu() -> NSMenu {
         let menu = NSMenu()
         menu.autoenablesItems = false
         for mode in CaptureMode.allCases {
-            let item = NSMenuItem(title: "Capture \(mode.title)", action: #selector(captureFromMenu(_:)), keyEquivalent: "")
+            if mode == .recording { menu.addItem(.separator()) }
+            let title = mode == .recording ? "Record Screen" : "Capture \(mode.title)"
+            let item = NSMenuItem(title: title, action: #selector(captureFromMenu(_:)), keyEquivalent: "")
             item.target = self
             item.representedObject = mode.rawValue
             item.setShortcut(for: mode.shortcutName)
