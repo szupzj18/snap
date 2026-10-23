@@ -4,14 +4,17 @@ import SnapCore
 
 /// Owns the menu bar icon and its menu.
 @MainActor
-final class StatusItemController: NSObject {
+final class StatusItemController: NSObject, NSMenuDelegate {
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let coordinator: CaptureCoordinator
     private let settingsWindow: SettingsWindowController
     private let historyWindow: HistoryWindowController
     private let recording: RecordingController
     private let updates: UpdateChecker
+    private let imports: ImageImportController
     private lazy var mainMenu = makeMenu()
+    /// Enabled only when the clipboard holds an image.
+    private var clipboardItems: [NSMenuItem] = []
     private var updateItems: [NSMenuItem] = []
     private var recordingTimer: Timer?
 
@@ -20,13 +23,15 @@ final class StatusItemController: NSObject {
         settingsWindow: SettingsWindowController,
         historyWindow: HistoryWindowController,
         recording: RecordingController,
-        updates: UpdateChecker
+        updates: UpdateChecker,
+        imports: ImageImportController
     ) {
         self.coordinator = coordinator
         self.settingsWindow = settingsWindow
         self.historyWindow = historyWindow
         self.recording = recording
         self.updates = updates
+        self.imports = imports
         super.init()
         showIdle()
     }
@@ -109,6 +114,12 @@ final class StatusItemController: NSObject {
             menu.addItem(item)
         }
         menu.addItem(.separator())
+        menu.addItem(ClosureMenuItem(title: "Open Image…") { [weak self] in self?.imports.openFile() })
+        let annotate = ClosureMenuItem(title: "Annotate Clipboard Image") { [weak self] in self?.imports.annotateClipboard() }
+        let pin = ClosureMenuItem(title: "Pin Clipboard Image") { [weak self] in self?.imports.pinClipboard() }
+        clipboardItems = [annotate, pin]
+        clipboardItems.forEach(menu.addItem)
+        menu.addItem(.separator())
         let history = NSMenuItem(title: "History…", action: #selector(openHistory), keyEquivalent: "")
         history.target = self
         menu.addItem(history)
@@ -120,7 +131,13 @@ final class StatusItemController: NSObject {
         menu.addItem(settings)
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit Snap", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.delegate = self
         return menu
+    }
+
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        let hasImage = imports.clipboardHasImage
+        clipboardItems.forEach { $0.isEnabled = hasImage }
     }
 
     /// Puts "Snap x.y.z Is Available…" at the top of the menu, or removes it.

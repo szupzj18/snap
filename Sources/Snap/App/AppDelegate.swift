@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     )
     private lazy var scrolling = ScrollingCaptureController(service: ScreenshotService(), onboarding: onboarding, router: router)
     private lazy var updates = UpdateChecker(settings: settings)
+    private lazy var imports = ImageImportController(editors: editors, pins: pins)
     private var statusItemController: StatusItemController?
     private var observations: Set<AnyCancellable> = []
 
@@ -33,7 +34,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         coordinator.scrolling = scrolling
         let statusItemController = StatusItemController(
             coordinator: coordinator, settingsWindow: settingsWindow, historyWindow: historyWindow, recording: recording,
-            updates: updates
+            updates: updates, imports: imports
         )
         updates.onUpdateAvailable = { [weak statusItemController] release in statusItemController?.showUpdate(release) }
         updates.start()

@@ -39,10 +39,13 @@ final class PinController {
 
     /// Where the pixels were on screen, shrunk to fit if the capture is bigger than the screen.
     private func initialFrame(for capture: Capture) -> CGRect {
-        let source = ScreenGeometry.flip(capture.sourceRect, primaryScreenHeight: NSScreen.primaryHeight)
         var size = capture.pointSize
         let screen = capture.displayID.flatMap(NSScreen.screen(for:)) ?? NSScreen.underMouse ?? NSScreen.screens[0]
         let visible = screen.visibleFrame
+        // Images from a file or the clipboard were never on screen: center them instead.
+        let source = capture.sourceRect == .zero
+            ? CGRect(x: visible.midX, y: visible.midY, width: 0, height: 0)
+            : ScreenGeometry.flip(capture.sourceRect, primaryScreenHeight: NSScreen.primaryHeight)
         let fit = min(1, visible.width * 0.9 / size.width, visible.height * 0.9 / size.height)
         size = CGSize(width: size.width * fit, height: size.height * fit)
         // Centered on the source, so a window capture's added shadow spreads evenly around it.
