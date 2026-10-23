@@ -1,18 +1,26 @@
 import Combine
 import CoreGraphics
 
-/// The annotations on one image, with snapshot-based undo and redo.
+/// The annotations and crop of one image, with snapshot-based undo and redo.
 public final class AnnotationDocument: ObservableObject {
     public let image: CGImage
     /// Pixels per point of the original capture.
     public let scale: CGFloat
 
     @Published public private(set) var annotations: [Annotation] = []
+    /// The part of the image to keep, in image pixels; nil keeps all of it. Annotations stay in
+    /// full-image coordinates, so widening the crop later brings them back.
+    @Published public private(set) var crop: CGRect?
     @Published public private(set) var canUndo = false
     @Published public private(set) var canRedo = false
 
-    private var undoStack: [[Annotation]] = []
-    private var redoStack: [[Annotation]] = []
+    private struct Snapshot {
+        var annotations: [Annotation]
+        var crop: CGRect?
+    }
+
+    private var undoStack: [Snapshot] = []
+    private var redoStack: [Snapshot] = []
 
     public init(image: CGImage, scale: CGFloat) {
         self.image = image
@@ -21,10 +29,13 @@ public final class AnnotationDocument: ObservableObject {
 
     public var imageSize: CGSize { CGSize(width: image.width, height: image.height) }
 
-    public var isEdited: Bool { !annotations.isEmpty }
+    /// What's shown and exported: the crop, or the whole image.
+    public var visibleRect: CGRect { crop ?? CGRect(origin: .zero, size: imageSize) }
+
+    public var isEdited: Bool { !annotations.isEmpty || crop != nil }
 
     public func add(_ annotation: Annotation) {
-        apply(annotations + [annotation])
+        apply(Snapshot(annotations: annotations + [annotation], crop: crop))
     }
 
     /// Swaps in a changed version of an existing annotation, keeping its stacking order.
@@ -33,12 +44,21 @@ public final class AnnotationDocument: ObservableObject {
               annotations[index] != annotation else { return }
         var updated = annotations
         updated[index] = annotation
-        apply(updated)
+        apply(Snapshot(annotations: updated, crop: crop))
     }
 
     public func remove(id: Annotation.ID) {
         guard annotations.contains(where: { $0.id == id }) else { return }
-        apply(annotations.filter { $0.id != id })
+        apply(Snapshot(annotations: annotations.filter { $0.id != id }, crop: crop))
+    }
+
+    /// Crops to `rect` (snapped to whole pixels and kept inside the image), or removes the crop.
+    public func setCrop(_ rect: CGRect?) {
+        let full = CGRect(origin: .zero, size: imageSize)
+        var newCrop = rect.map { $0.integral.intersection(full) }
+        if let candidate = newCrop, candidate.isEmpty || candidate == full { newCrop = nil }
+        guard newCrop != crop else { return }
+        apply(Snapshot(annotations: annotations, crop: newCrop))
     }
 
     /// Numbers continue from the highest counter, so undoing one frees its number.
@@ -52,26 +72,27 @@ public final class AnnotationDocument: ObservableObject {
 
     public func undo() {
         guard let previous = undoStack.popLast() else { return }
-        redoStack.append(annotations)
-        annotations = previous
-        updateFlags()
+        redoStack.append(current)
+        restore(previous)
     }
 
     public func redo() {
         guard let next = redoStack.popLast() else { return }
-        undoStack.append(annotations)
-        annotations = next
-        updateFlags()
+        undoStack.append(current)
+        restore(next)
     }
 
-    private func apply(_ newAnnotations: [Annotation]) {
-        undoStack.append(annotations)
+    private var current: Snapshot { Snapshot(annotations: annotations, crop: crop) }
+
+    private func apply(_ snapshot: Snapshot) {
+        undoStack.append(current)
         redoStack.removeAll()
-        annotations = newAnnotations
-        updateFlags()
+        restore(snapshot)
     }
 
-    private func updateFlags() {
+    private func restore(_ snapshot: Snapshot) {
+        if snapshot.annotations != annotations { annotations = snapshot.annotations }
+        if snapshot.crop != crop { crop = snapshot.crop }
         canUndo = !undoStack.isEmpty
         canRedo = !redoStack.isEmpty
     }

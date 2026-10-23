@@ -26,7 +26,8 @@ public final class EditorWindowController: NSWindowController, NSWindowDelegate 
             defer: false
         )
         window.title = "Annotate — \(settings.filename(for: capture))"
-        window.minSize = CGSize(width: 680, height: 420)
+        // Wide enough for the whole toolbar.
+        window.minSize = CGSize(width: Self.minimumWidth, height: 420)
         window.isReleasedWhenClosed = false
         window.tabbingMode = .disallowed
         super.init(window: window)
@@ -54,11 +55,13 @@ public final class EditorWindowController: NSWindowController, NSWindowDelegate 
         onClose?()
     }
 
+    private static let minimumWidth: CGFloat = 860
+
     private static func initialSize(for capture: Capture) -> CGSize {
         let toolbarHeight: CGFloat = 52
         let margin: CGFloat = 48
         let visible = (NSScreen.main ?? NSScreen.screens[0]).visibleFrame
-        let width = min(max(capture.pointSize.width + margin, 680), visible.width * 0.85)
+        let width = min(max(capture.pointSize.width + margin, minimumWidth), visible.width * 0.85)
         let height = min(max(capture.pointSize.height + margin + toolbarHeight, 420), visible.height * 0.85)
         return CGSize(width: width, height: height)
     }
@@ -66,7 +69,7 @@ public final class EditorWindowController: NSWindowController, NSWindowDelegate 
     // MARK: Export
 
     private func exportedImage() -> CGImage? {
-        renderer.export(annotationDocument.annotations)
+        renderer.export(annotationDocument.annotations, crop: annotationDocument.crop)
     }
 
     private func copyResult() {
@@ -171,12 +174,19 @@ private struct EditorToolbar: View {
             }
             .opacity(state.tool.usesColor ? 1 : 0.35)
 
-            Picker("Size", selection: $state.size) {
-                ForEach(AnnotationSize.allCases) { Text($0.title).tag($0) }
+            if state.tool == .crop {
+                Button("Reset Crop") { document.setCrop(nil) }
+                    .fixedSize()
+                    .disabled(document.crop == nil)
+                    .help("Back to the whole image (Delete)")
+            } else {
+                Picker("Size", selection: $state.size) {
+                    ForEach(AnnotationSize.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(width: 96)
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .frame(width: 96)
 
             Divider().frame(height: 20)
 

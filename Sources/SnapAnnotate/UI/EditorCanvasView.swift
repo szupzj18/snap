@@ -1,5 +1,6 @@
 import AppKit
 import Combine
+import SnapCore
 
 /// Shows the image fitted into the view and turns mouse input into annotations.
 final class EditorCanvasView: NSView, NSTextFieldDelegate {
@@ -24,6 +25,11 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
     /// Set while the toolbar is updated to match a newly selected annotation.
     private var isSyncingToolbar = false
 
+    /// The crop being dragged out, before it's committed on mouse up.
+    private var cropDraft: CGRect?
+    /// The text annotation being re-edited; hidden while its field is open.
+    private var editingTextID: Annotation.ID?
+
     init(document: AnnotationDocument, state: EditorState) {
         self.document = document
         self.state = state
@@ -32,11 +38,19 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
         document.$annotations
             .sink { [weak self] _ in self?.needsDisplay = true }
             .store(in: &observations)
+        document.$crop
+            .sink { [weak self] _ in
+                self?.commitText()
+                self?.needsDisplay = true
+            }
+            .store(in: &observations)
         state.$tool
             .sink { [weak self] tool in
                 guard let self else { return }
                 self.commitText()
                 if tool != .select { self.deselect() }
+                // Entering or leaving the crop tool changes what part of the image is shown.
+                self.needsDisplay = true
                 self.window?.invalidateCursorRects(for: self)
             }
             .store(in: &observations)
@@ -64,9 +78,16 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
 
     // MARK: Geometry
 
-    /// The image's rect in view coordinates: fitted with a margin, never larger than its point size.
+    /// The part of the image on screen, in image pixels: all of it while cropping, so the crop can
+    /// be redrawn anywhere; otherwise just the crop.
+    private var shownRect: CGRect {
+        state.tool == .crop ? CGRect(origin: .zero, size: renderer.imageSize) : document.visibleRect
+    }
+
+    /// Where `shownRect` is drawn, in view coordinates: fitted with a margin, never larger than its point size.
     private var imageRect: CGRect {
-        let pointSize = CGSize(width: renderer.imageSize.width / document.scale, height: renderer.imageSize.height / document.scale)
+        let shown = shownRect.size
+        let pointSize = CGSize(width: shown.width / document.scale, height: shown.height / document.scale)
         let available = bounds.insetBy(dx: 24, dy: 24)
         let fit = min(1, available.width / pointSize.width, available.height / pointSize.height)
         let size = CGSize(width: pointSize.width * fit, height: pointSize.height * fit)
@@ -74,17 +95,25 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
     }
 
     /// View points per image pixel.
-    private var viewScale: CGFloat { imageRect.width / renderer.imageSize.width }
+    private var viewScale: CGFloat { imageRect.width / shownRect.width }
 
     private func imagePoint(_ viewPoint: CGPoint) -> CGPoint {
         let rect = imageRect
-        let x = (viewPoint.x - rect.minX) / viewScale
-        let y = (viewPoint.y - rect.minY) / viewScale
-        return CGPoint(x: min(max(x, 0), renderer.imageSize.width), y: min(max(y, 0), renderer.imageSize.height))
+        let shown = shownRect
+        let x = shown.minX + (viewPoint.x - rect.minX) / viewScale
+        let y = shown.minY + (viewPoint.y - rect.minY) / viewScale
+        return CGPoint(x: min(max(x, shown.minX), shown.maxX), y: min(max(y, shown.minY), shown.maxY))
     }
 
     private func viewPoint(_ imagePoint: CGPoint) -> CGPoint {
-        CGPoint(x: imageRect.minX + imagePoint.x * viewScale, y: imageRect.minY + imagePoint.y * viewScale)
+        let shown = shownRect
+        return CGPoint(x: imageRect.minX + (imagePoint.x - shown.minX) * viewScale,
+                       y: imageRect.minY + (imagePoint.y - shown.minY) * viewScale)
+    }
+
+    private func viewRect(_ imageRect: CGRect) -> CGRect {
+        let origin = viewPoint(imageRect.origin)
+        return CGRect(x: origin.x, y: origin.y, width: imageRect.width * viewScale, height: imageRect.height * viewScale)
     }
 
     override func setFrameSize(_ newSize: NSSize) {
@@ -104,8 +133,9 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
         context.clip(to: rect)
         context.translateBy(x: rect.minX, y: rect.minY)
         context.scaleBy(x: viewScale, y: viewScale)
+        context.translateBy(x: -shownRect.minX, y: -shownRect.minY)
         context.interpolationQuality = .high
-        var annotations = document.annotations
+        var annotations = document.annotations.filter { $0.id != editingTextID }
         if let movePreview, let index = annotations.firstIndex(where: { $0.id == movePreview.id }) {
             annotations[index] = movePreview
         }
@@ -115,13 +145,37 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
         if let selected = movePreview ?? selectedAnnotation {
             drawSelection(around: selected)
         }
+        if state.tool == .crop, let crop = cropDraft ?? document.crop {
+            drawCropOverlay(viewRect(crop), in: context)
+        }
+    }
+
+    /// Dims what the crop leaves out and marks its corners.
+    private func drawCropOverlay(_ crop: CGRect, in context: CGContext) {
+        let dim = CGMutablePath()
+        dim.addRect(imageRect)
+        dim.addRect(crop)
+        context.addPath(dim)
+        context.setFillColor(NSColor.black.withAlphaComponent(0.55).cgColor)
+        context.fillPath(using: .evenOdd)
+
+        context.setStrokeColor(NSColor.white.cgColor)
+        context.setLineWidth(1)
+        context.stroke(crop.insetBy(dx: 0.5, dy: 0.5))
+        let arm = min(16, crop.width / 3, crop.height / 3)
+        context.setLineWidth(3)
+        for (x, dx) in [(crop.minX, arm), (crop.maxX, -arm)] {
+            for (y, dy) in [(crop.minY, arm), (crop.maxY, -arm)] {
+                context.move(to: CGPoint(x: x + dx, y: y))
+                context.addLine(to: CGPoint(x: x, y: y))
+                context.addLine(to: CGPoint(x: x, y: y + dy))
+            }
+        }
+        context.strokePath()
     }
 
     private func drawSelection(around annotation: Annotation) {
-        let box = annotation.bounds
-        let origin = viewPoint(box.origin)
-        let rect = CGRect(x: origin.x, y: origin.y, width: box.width * viewScale, height: box.height * viewScale)
-            .insetBy(dx: -4, dy: -4)
+        let rect = viewRect(annotation.bounds).insetBy(dx: -4, dy: -4)
         let path = NSBezierPath(roundedRect: rect, xRadius: 3, yRadius: 3)
         path.lineWidth = 1.5
         NSColor.white.withAlphaComponent(0.9).setStroke()
@@ -188,6 +242,16 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
         let point = imagePoint(location)
         let scale = document.scale
 
+        // Double-clicking a text annotation reopens it for editing.
+        if event.clickCount == 2, state.tool == .select || state.tool == .text,
+           let hit = document.annotation(at: point, tolerance: 6 / viewScale), case .text = hit.shape {
+            moving = nil
+            deselect()
+            commitText()
+            beginText(at: point, editing: hit)
+            return
+        }
+
         switch state.tool {
         case .select:
             // A few screen points of slack, whatever the zoom.
@@ -207,6 +271,9 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
                 color: state.color,
                 lineWidth: 0
             ))
+        case .crop:
+            dragStart = point
+            cropDraft = nil
         default:
             dragStart = point
         }
@@ -220,21 +287,41 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
             return
         }
         guard let start = dragStart else { return }
-        let rect = CGRect(x: min(start.x, point.x), y: min(start.y, point.y), width: abs(point.x - start.x), height: abs(point.y - start.y))
+        // Shift: squares and 45° arrows. Option: shapes grow from where the drag started.
+        let shift = event.modifierFlags.contains(.shift)
+        let rect = SelectionGeometry.rect(
+            anchor: start, current: point, square: shift, fromCenter: event.modifierFlags.contains(.option),
+            bounds: CGRect(origin: .zero, size: renderer.imageSize)
+        )
+        if state.tool == .crop {
+            cropDraft = rect
+            needsDisplay = true
+            return
+        }
         let shape: AnnotationShape
         switch state.tool {
-        case .arrow: shape = .arrow(from: start, to: point)
+        case .arrow: shape = .arrow(from: start, to: shift ? Self.snapped(point, from: start) : point)
         case .rectangle: shape = .rectangle(rect)
         case .highlight: shape = .highlight(rect)
         case .pixelate: shape = .pixelate(rect)
         case .blur: shape = .blur(rect)
-        case .select, .text, .counter: return
+        case .select, .crop, .text, .counter: return
         }
         draft = Annotation(id: draft?.id ?? UUID(), shape: shape, color: state.color, lineWidth: state.size.lineWidth * document.scale)
         needsDisplay = true
     }
 
     override func mouseUp(with event: NSEvent) {
+        if state.tool == .crop {
+            // A click without a real drag keeps the current crop.
+            if let cropDraft, cropDraft.width > 8, cropDraft.height > 8 {
+                document.setCrop(cropDraft)
+            }
+            cropDraft = nil
+            dragStart = nil
+            needsDisplay = true
+            return
+        }
         if moving != nil {
             if let movePreview { document.replace(movePreview) }
             moving = nil
@@ -251,6 +338,16 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
         document.add(draft)
     }
 
+    /// The end of an arrow turned to the nearest multiple of 45°, keeping its length.
+    static func snapped(_ point: CGPoint, from start: CGPoint) -> CGPoint {
+        let dx = point.x - start.x
+        let dy = point.y - start.y
+        let step = CGFloat.pi / 4
+        let angle = (atan2(dy, dx) / step).rounded() * step
+        let length = hypot(dx, dy)
+        return CGPoint(x: start.x + cos(angle) * length, y: start.y + sin(angle) * length)
+    }
+
     /// Ignore accidental clicks that would leave a speck.
     private static func isBigEnough(_ shape: AnnotationShape) -> Bool {
         switch shape {
@@ -264,6 +361,18 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
 
     override func keyDown(with event: NSEvent) {
         let modifiers = event.modifierFlags.intersection([.command, .control, .option])
+        if modifiers.isEmpty, state.tool == .crop {
+            switch event.keyCode {
+            case 51, 117: // Delete, Forward Delete: back to the whole image
+                document.setCrop(nil)
+                return
+            case 36, 76, 53: // Return, Enter, Esc: done cropping
+                state.tool = .select
+                return
+            default:
+                break
+            }
+        }
         if modifiers.isEmpty, selectedID != nil {
             switch event.keyCode {
             case 51, 117: // Delete, Forward Delete
@@ -286,11 +395,23 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
 
     // MARK: Text
 
-    private func beginText(at point: CGPoint) {
-        textOrigin = point
-        textColor = state.color
-        textFontSize = state.size.fontSize * document.scale
-        let field = NSTextField(string: "")
+    /// Opens a text field at `point`, or over an existing text annotation to change it.
+    private func beginText(at point: CGPoint, editing existing: Annotation? = nil) {
+        var string = ""
+        if let existing, case let .text(origin, text, fontSize) = existing.shape {
+            editingTextID = existing.id
+            textOrigin = origin
+            textColor = existing.color
+            textFontSize = fontSize
+            string = text
+            needsDisplay = true
+        } else {
+            editingTextID = nil
+            textOrigin = point
+            textColor = state.color
+            textFontSize = state.size.fontSize * document.scale
+        }
+        let field = NSTextField(string: string)
         field.isBordered = false
         field.drawsBackground = false
         field.focusRingType = .none
@@ -300,8 +421,9 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
         field.font = .systemFont(ofSize: fontSize, weight: .bold)
         field.textColor = NSColor(cgColor: textColor.cgColor)
         field.placeholderString = "Text"
-        let origin = viewPoint(point)
-        field.frame = CGRect(x: origin.x - 2, y: origin.y, width: max(fontSize * 4, 60), height: ceil(fontSize * 1.3))
+        let origin = viewPoint(textOrigin)
+        let width = max(field.attributedStringValue.size().width + 16, fontSize * 4, 60)
+        field.frame = CGRect(x: origin.x - 2, y: origin.y, width: width, height: ceil(fontSize * 1.3))
         addSubview(field)
         window?.makeFirstResponder(field)
         textField = field
@@ -336,17 +458,27 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
         let string = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         field.removeFromSuperview()
         window?.makeFirstResponder(self)
-        guard !string.isEmpty else { return }
-        document.add(Annotation(
-            shape: .text(origin: textOrigin, string: string, fontSize: textFontSize),
-            color: textColor,
-            lineWidth: 0
-        ))
+        let editingID = editingTextID
+        editingTextID = nil
+        needsDisplay = true
+        let shape = AnnotationShape.text(origin: textOrigin, string: string, fontSize: textFontSize)
+        if let editingID {
+            // Emptying an existing text deletes it.
+            if string.isEmpty {
+                document.remove(id: editingID)
+            } else {
+                document.replace(Annotation(id: editingID, shape: shape, color: textColor, lineWidth: 0))
+            }
+        } else if !string.isEmpty {
+            document.add(Annotation(shape: shape, color: textColor, lineWidth: 0))
+        }
     }
 
     private func cancelText() {
         textField?.removeFromSuperview()
         textField = nil
+        editingTextID = nil
+        needsDisplay = true
         window?.makeFirstResponder(self)
     }
 }

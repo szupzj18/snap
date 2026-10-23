@@ -28,9 +28,10 @@ final class EditorCanvasInteractionTests: XCTestCase {
         CGPoint(x: 100 + x, y: 300 - (75 + y))
     }
 
-    private func mouse(_ type: NSEvent.EventType, _ x: CGFloat, _ y: CGFloat) -> NSEvent {
-        NSEvent.mouseEvent(with: type, location: windowPoint(x, y), modifierFlags: [], timestamp: 0,
-                           windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!
+    private func mouse(_ type: NSEvent.EventType, _ x: CGFloat, _ y: CGFloat,
+                       flags: NSEvent.ModifierFlags = [], clicks: Int = 1) -> NSEvent {
+        NSEvent.mouseEvent(with: type, location: windowPoint(x, y), modifierFlags: flags, timestamp: 0,
+                           windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: clicks, pressure: 1)!
     }
 
     private func key(_ code: UInt16) -> NSEvent {
@@ -83,5 +84,46 @@ final class EditorCanvasInteractionTests: XCTestCase {
         state.tool = .arrow
         state.color = .green
         XCTAssertEqual(document.annotations.first?.color, .red)
+    }
+
+    func testCropToolSetsCropAndShowsOnlyThatPart() {
+        state.tool = .crop
+        canvas.mouseDown(with: mouse(.leftMouseDown, 10, 10))
+        canvas.mouseDragged(with: mouse(.leftMouseDragged, 110, 90))
+        canvas.mouseUp(with: mouse(.leftMouseUp, 110, 90))
+        XCTAssertEqual(document.crop, CGRect(x: 10, y: 10, width: 100, height: 80))
+        canvas.keyDown(with: key(36)) // Return: done cropping
+        XCTAssertEqual(state.tool, .select)
+    }
+
+    func testShiftDrawsSquaresAndStraightArrows() {
+        state.tool = .rectangle
+        canvas.mouseDown(with: mouse(.leftMouseDown, 120, 20))
+        canvas.mouseDragged(with: mouse(.leftMouseDragged, 150, 80, flags: .shift))
+        canvas.mouseUp(with: mouse(.leftMouseUp, 150, 80, flags: .shift))
+        XCTAssertEqual(document.annotations.last?.shape, .rectangle(CGRect(x: 120, y: 20, width: 60, height: 60)))
+
+        state.tool = .arrow
+        canvas.mouseDown(with: mouse(.leftMouseDown, 10, 100))
+        canvas.mouseDragged(with: mouse(.leftMouseDragged, 90, 104, flags: .shift))
+        canvas.mouseUp(with: mouse(.leftMouseUp, 90, 104, flags: .shift))
+        guard case let .arrow(from, to)? = document.annotations.last?.shape else { return XCTFail("no arrow") }
+        XCTAssertEqual(from, CGPoint(x: 10, y: 100))
+        XCTAssertEqual(to.y, 100, accuracy: 0.001, "snapped to horizontal")
+    }
+
+    func testDoubleClickEditsExistingText() throws {
+        let text = Annotation(shape: .text(origin: CGPoint(x: 20, y: 100), string: "Hello", fontSize: 20), color: .blue, lineWidth: 0)
+        document.add(text)
+        canvas.mouseDown(with: mouse(.leftMouseDown, 30, 110, clicks: 1))
+        canvas.mouseUp(with: mouse(.leftMouseUp, 30, 110, clicks: 1))
+        canvas.mouseDown(with: mouse(.leftMouseDown, 30, 110, clicks: 2))
+        let field = try XCTUnwrap(canvas.subviews.compactMap { $0 as? NSTextField }.first)
+        XCTAssertEqual(field.stringValue, "Hello")
+        field.stringValue = "Hello again"
+        canvas.control(field, textView: NSTextView(), doCommandBy: #selector(NSResponder.insertNewline(_:)))
+        XCTAssertEqual(document.annotations.last?.id, text.id, "replaced, not added")
+        XCTAssertEqual(document.annotations.last?.shape, .text(origin: CGPoint(x: 20, y: 100), string: "Hello again", fontSize: 20))
+        XCTAssertEqual(document.annotations.count, 2)
     }
 }

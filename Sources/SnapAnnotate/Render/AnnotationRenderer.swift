@@ -33,15 +33,17 @@ public final class AnnotationRenderer {
         }
     }
 
-    /// The flattened result at full resolution.
-    public func export(_ annotations: [Annotation]) -> CGImage? {
+    /// The flattened result at full resolution, limited to `crop` (image pixels) if given.
+    public func export(_ annotations: [Annotation], crop: CGRect? = nil) -> CGImage? {
+        let area = (crop ?? CGRect(origin: .zero, size: imageSize)).integral
         let colorSpace = base.colorSpace.flatMap { $0.model == .rgb ? $0 : nil } ?? CGColorSpace(name: CGColorSpace.sRGB)!
-        guard let context = CGContext(
-            data: nil, width: base.width, height: base.height, bitsPerComponent: 8, bytesPerRow: 0,
+        guard area.width > 0, area.height > 0, let context = CGContext(
+            data: nil, width: Int(area.width), height: Int(area.height), bitsPerComponent: 8, bytesPerRow: 0,
             space: colorSpace, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) else { return nil }
-        context.translateBy(x: 0, y: CGFloat(base.height))
+        context.translateBy(x: 0, y: area.height)
         context.scaleBy(x: 1, y: -1)
+        context.translateBy(x: -area.minX, y: -area.minY)
         draw(annotations, in: context)
         return context.makeImage()
     }
