@@ -29,7 +29,8 @@ Retina scaling.
   15/30/60 fps, pointer optional), with sound from the Mac and/or the microphone mixed into one
   track. The menu bar icon becomes a stop button with a timer; pause and resume from its menu
   (pauses leave no gap).
-  Turn any recording into a looping GIF from its Quick Access preview.
+  From its Quick Access preview, trim a recording (QuickTime-style trim bar, no re-encoding) or
+  turn it into a looping GIF.
 - **Quick Access preview** in the bottom-right corner after each capture: drag it into any app
   as a file, copy, save, share, annotate, pin or close. Closes itself after a few seconds unless hovered.
 - **Annotation editor**: arrow, rectangle, text, highlight, pixelate, blur and numbered
@@ -122,7 +123,7 @@ make ui-snapshots   # writes build/ui-snapshots/*.png
 ```
 
 Renders the Quick Access cards, area selection (with the magnifier), the editor, its crop mode,
-the history window and Settings, each to a PNG, so UI changes can be reviewed side by side
+the recording trim window, the history window and Settings, each to a PNG, so UI changes can be reviewed side by side
 without clicking through the app. Screen content in them is made up. The windows are placed
 far outside every display, so nothing appears on screen, but capturing them needs Screen
 Recording access for the terminal. They're skipped in `make test`. The cases live in

@@ -79,3 +79,19 @@ enum TestVideo {
         return url
     }
 }
+
+final class VideoTrimmingTests: XCTestCase {
+    func testTrimKeepsOnlyTheRange() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = try await TestVideo.make(in: directory, width: 64, height: 48, seconds: 2, fps: 30)
+
+        let range = CMTimeRange(start: CMTime(seconds: 0.5, preferredTimescale: 600), end: CMTime(seconds: 1.5, preferredTimescale: 600))
+        try await VideoTrimming.trim(url, to: range)
+
+        let duration = try await AVURLAsset(url: url).load(.duration).seconds
+        XCTAssertEqual(duration, 1.0, accuracy: 0.1)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: directory.path).count, 1, "no temporary file left")
+    }
+}

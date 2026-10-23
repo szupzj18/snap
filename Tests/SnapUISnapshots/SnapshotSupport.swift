@@ -1,3 +1,4 @@
+import AVFoundation
 import AppKit
 import ScreenCaptureKit
 import SwiftUI
@@ -141,6 +142,46 @@ enum FakeContent {
         CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
                   space: CGColorSpace(name: CGColorSpace.sRGB)!,
                   bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+    }
+}
+
+extension FakeContent {
+    /// A short H.264 movie of a made-up window with a bar sliding across it.
+    static func movie(seconds: Double = 2, fps: Int32 = 30) async throws -> URL {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).mp4")
+        let size = (width: 960, height: 600)
+        let writer = try AVAssetWriter(outputURL: url, fileType: .mp4)
+        let input = AVAssetWriterInput(mediaType: .video, outputSettings: [
+            AVVideoCodecKey: AVVideoCodecType.h264, AVVideoWidthKey: size.width, AVVideoHeightKey: size.height,
+        ])
+        let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: input, sourcePixelBufferAttributes: [
+            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
+            kCVPixelBufferWidthKey as String: size.width, kCVPixelBufferHeightKey as String: size.height,
+        ])
+        writer.add(input)
+        writer.startWriting()
+        writer.startSession(atSourceTime: .zero)
+        let background = screenshot(width: size.width, height: size.height)
+        let frames = Int(seconds * Double(fps))
+        for index in 0..<frames {
+            while !input.isReadyForMoreMediaData { try await Task.sleep(nanoseconds: 1_000_000) }
+            var buffer: CVPixelBuffer?
+            CVPixelBufferPoolCreatePixelBuffer(nil, adaptor.pixelBufferPool!, &buffer)
+            CVPixelBufferLockBaseAddress(buffer!, [])
+            let context = CGContext(
+                data: CVPixelBufferGetBaseAddress(buffer!), width: size.width, height: size.height, bitsPerComponent: 8,
+                bytesPerRow: CVPixelBufferGetBytesPerRow(buffer!), space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                bitmapInfo: CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.premultipliedFirst.rawValue
+            )!
+            context.draw(background, in: CGRect(x: 0, y: 0, width: size.width, height: size.height))
+            context.setFillColor(CGColor(srgbRed: 0.9, green: 0.2, blue: 0.3, alpha: 1))
+            context.fill(CGRect(x: CGFloat(index) / CGFloat(frames) * CGFloat(size.width - 120), y: 80, width: 120, height: 40))
+            CVPixelBufferUnlockBaseAddress(buffer!, [])
+            adaptor.append(buffer!, withPresentationTime: CMTime(value: CMTimeValue(index), timescale: fps))
+        }
+        input.markAsFinished()
+        await writer.finishWriting()
+        return url
     }
 }
 
