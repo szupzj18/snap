@@ -58,7 +58,7 @@ final class RecordingController {
         state = .busy
         do {
             let snapshots = try await service.captureAllDisplays()
-            guard let selection = await AreaSelectionSession(mode: .recording).run(snapshots: snapshots),
+            guard let selection = await AreaSelectionSession(mode: .recording).run(snapshots: snapshots).capture,
                   let displayID = selection.displayID else {
                 reset()
                 return
