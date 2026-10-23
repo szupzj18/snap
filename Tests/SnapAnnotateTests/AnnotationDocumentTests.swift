@@ -52,3 +52,35 @@ final class AnnotationDocumentTests: XCTestCase {
         XCTAssertEqual(document.nextCounterNumber, 2)
     }
 }
+
+final class AnnotationDocumentCropTests: XCTestCase {
+    func testCropIsUndoableAndClamped() {
+        let document = AnnotationDocument(image: Pixels.solid(width: 100, height: 80), scale: 1)
+        document.setCrop(CGRect(x: 10.4, y: -5, width: 50, height: 40.2))
+        XCTAssertEqual(document.crop, CGRect(x: 10, y: 0, width: 51, height: 36))
+        XCTAssertEqual(document.visibleRect, document.crop)
+        XCTAssertTrue(document.isEdited)
+
+        document.undo()
+        XCTAssertNil(document.crop)
+        XCTAssertEqual(document.visibleRect, CGRect(x: 0, y: 0, width: 100, height: 80))
+        document.redo()
+        XCTAssertNotNil(document.crop)
+    }
+
+    func testCroppingToWholeImageMeansNoCrop() {
+        let document = AnnotationDocument(image: Pixels.solid(width: 100, height: 80), scale: 1)
+        document.setCrop(CGRect(x: -10, y: -10, width: 200, height: 200))
+        XCTAssertNil(document.crop)
+        XCTAssertFalse(document.canUndo, "no change, no undo step")
+    }
+
+    func testAnnotationUndoKeepsCrop() {
+        let document = AnnotationDocument(image: Pixels.solid(width: 100, height: 80), scale: 1)
+        document.setCrop(CGRect(x: 0, y: 0, width: 50, height: 50))
+        document.add(Annotation(shape: .rectangle(CGRect(x: 1, y: 1, width: 5, height: 5)), color: .red, lineWidth: 1))
+        document.undo()
+        XCTAssertEqual(document.annotations, [])
+        XCTAssertEqual(document.crop, CGRect(x: 0, y: 0, width: 50, height: 50))
+    }
+}

@@ -2,13 +2,14 @@ import Combine
 import CoreGraphics
 
 public enum AnnotationTool: String, CaseIterable, Identifiable {
-    case select, arrow, rectangle, text, highlight, pixelate, blur, counter
+    case select, crop, arrow, rectangle, text, highlight, pixelate, blur, counter
 
     public var id: String { rawValue }
 
     var title: String {
         switch self {
         case .select: "Select"
+        case .crop: "Crop"
         case .arrow: "Arrow"
         case .rectangle: "Rectangle"
         case .text: "Text"
@@ -22,6 +23,7 @@ public enum AnnotationTool: String, CaseIterable, Identifiable {
     var systemImage: String {
         switch self {
         case .select: "cursorarrow"
+        case .crop: "crop"
         case .arrow: "arrow.up.right"
         case .rectangle: "rectangle"
         case .text: "t.square"
@@ -36,6 +38,7 @@ public enum AnnotationTool: String, CaseIterable, Identifiable {
     var key: Character {
         switch self {
         case .select: "v"
+        case .crop: "c"
         case .arrow: "a"
         case .rectangle: "r"
         case .text: "t"
@@ -46,8 +49,8 @@ public enum AnnotationTool: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Pixelate and blur ignore the color.
-    var usesColor: Bool { self != .pixelate && self != .blur }
+    /// Pixelate, blur and crop ignore the color.
+    var usesColor: Bool { self != .pixelate && self != .blur && self != .crop }
 }
 
 public enum AnnotationSize: String, CaseIterable, Identifiable {

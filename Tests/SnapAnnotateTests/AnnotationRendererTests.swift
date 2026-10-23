@@ -11,6 +11,23 @@ final class AnnotationRendererTests: XCTestCase {
         XCTAssertEqual(Pixels.at(output, x: 5, y: 17), [0, 0, 255, 255])
     }
 
+    func testExportHonoursCrop() throws {
+        // Red on top, blue below; crop to the bottom-right quarter.
+        let base = Pixels.halves(width: 20, height: 20)
+        let output = try XCTUnwrap(AnnotationRenderer(base: base, scale: 1).export([], crop: CGRect(x: 10, y: 10, width: 10, height: 10)))
+        XCTAssertEqual(output.width, 10)
+        XCTAssertEqual(output.height, 10)
+        XCTAssertEqual(Pixels.at(output, x: 5, y: 5), [0, 0, 255, 255])
+    }
+
+    func testExportedCropKeepsAnnotationPositions() throws {
+        let base = Pixels.solid(width: 40, height: 40)
+        let rect = Annotation(shape: .highlight(CGRect(x: 20, y: 20, width: 10, height: 10)), color: .blue, lineWidth: 1)
+        let output = try XCTUnwrap(AnnotationRenderer(base: base, scale: 1).export([rect], crop: CGRect(x: 15, y: 15, width: 20, height: 20)))
+        XCTAssertLessThan(Pixels.at(output, x: 10, y: 10)[0], 255, "highlight now 5 px into the crop")
+        XCTAssertEqual(Pixels.at(output, x: 2, y: 2), [255, 255, 255, 255])
+    }
+
     func testRectangleIsDrawnAtTopLeftCoordinates() throws {
         let base = Pixels.solid(width: 40, height: 40)
         let rect = Annotation(shape: .rectangle(CGRect(x: 10, y: 4, width: 20, height: 10)), color: .green, lineWidth: 2)

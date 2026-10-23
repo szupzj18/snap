@@ -32,7 +32,8 @@ Retina scaling.
   as a file, copy, save, share, annotate, pin or close. Closes itself after a few seconds unless hovered.
 - **Annotation editor**: arrow, rectangle, text, highlight, pixelate, blur and numbered
   counters, with colors, three sizes, undo/redo, copy and PNG export at full resolution.
-  The select tool moves, restyles and deletes what you've drawn.
+  The select tool moves, restyles and deletes what you've drawn; double-click a text to change
+  it. Crop with C. Hold Shift for squares and 45° arrows, Option to draw from the center.
 - **Pins**: keep a capture floating above all windows. Drag to move, scroll or pinch to zoom,
   ⌥-scroll to change opacity, right-click for more.
 - **History**: the last 50 captures (configurable) are kept, so a closed preview is never lost.
@@ -54,7 +55,7 @@ All of them can be changed in Settings › Shortcuts. The defaults stay off macO
 to use those for Snap, turn them off first in System Settings › Keyboard ›
 Keyboard Shortcuts › Screenshots.
 
-In the editor: V select, A arrow, R rectangle, T text, H highlight, P pixelate, B blur, N counter;
+In the editor: V select, C crop, A arrow, R rectangle, T text, H highlight, P pixelate, B blur, N counter;
 ⌘Z / ⇧⌘Z undo and redo; ⌘C copy; ⌘S save. With something selected, Delete removes it and
 Esc deselects.
 
