@@ -127,6 +127,7 @@ private struct HistoryCell: View {
                 Button("Annotate…") { handlers.edit(entry) }
                 Button("Pin to Screen") { handlers.pin(entry) }
                 Button("Show in Finder") { handlers.reveal(entry) }
+                ShareLink("Share…", item: history.fileURL(for: entry))
                 Divider()
                 Button("Delete", role: .destructive) { history.remove(entry) }
             }

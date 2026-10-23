@@ -27,7 +27,7 @@ Retina scaling.
   15/30/60 fps, pointer optional). The menu bar icon becomes a stop button with a timer.
   Turn any recording into a looping GIF from its Quick Access preview.
 - **Quick Access preview** in the bottom-right corner after each capture: drag it into any app
-  as a file, copy, save, annotate, pin or close. Closes itself after a few seconds unless hovered.
+  as a file, copy, save, share, annotate, pin or close. Closes itself after a few seconds unless hovered.
 - **Annotation editor**: arrow, rectangle, text, highlight, pixelate, blur and numbered
   counters, with colors, three sizes, undo/redo, copy and PNG export at full resolution.
   The select tool moves, restyles and deletes what you've drawn.
@@ -119,7 +119,8 @@ spaces and is unit-tested.
 
 Planned for after the MVP, with the extension points already in place:
 
-- Upload and sharing.
+- Upload to a storage service. (Sharing through macOS's Share menu — AirDrop, Messages, Mail —
+  is already there, from Quick Access, pins and the history.)
 
 ## Icon
 

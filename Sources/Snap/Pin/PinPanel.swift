@@ -8,6 +8,8 @@ final class PinPanel: NSPanel {
     var onCopy: (() -> Void)?
     var onSave: (() -> Void)?
     var onEdit: (() -> Void)?
+    /// A file of the capture for the Share menu, made when the menu opens.
+    var fileForShare: (() -> URL?)?
     var onClose: (() -> Void)?
 
     private let imageSize: CGSize
@@ -89,6 +91,9 @@ final class PinPanel: NSPanel {
         menu.addItem(item("Copy", key: "c") { [weak self] in self?.onCopy?() })
         menu.addItem(item("Save", key: "s") { [weak self] in self?.onSave?() })
         menu.addItem(item("Annotate…") { [weak self] in self?.onEdit?() })
+        if let url = fileForShare?() {
+            menu.addItem(NSSharingServicePicker(items: [url]).standardShareMenuItem)
+        }
         menu.addItem(.separator())
         menu.addItem(item("Actual Size", key: "0") { [weak self] in self?.setZoom(1) })
         menu.addItem(item("Zoom In", key: "=") { [weak self] in self?.zoomBy(1.25) })

@@ -5,6 +5,8 @@ import SwiftUI
 struct QuickAccessCardView: View {
     @ObservedObject var item: QuickAccessItem
     let handlers: QuickAccessHandlers
+    /// The file to share, made on first hover so an image isn't written out unless it's needed.
+    @State private var shareURL: URL?
 
     var body: some View {
         ZStack {
@@ -48,6 +50,13 @@ struct QuickAccessCardView: View {
                     HStack {
                         CornerButton(systemImage: "xmark", help: "Close", action: handlers.close)
                         Spacer()
+                        if let shareURL {
+                            ShareLink(item: shareURL) {
+                                CornerIcon(systemImage: "square.and.arrow.up")
+                            }
+                            .buttonStyle(.plain)
+                            .help("Share")
+                        }
                         if item.recording == nil {
                             CornerButton(systemImage: "pin.fill", help: "Pin to screen", action: handlers.pin)
                         }
@@ -74,6 +83,11 @@ struct QuickAccessCardView: View {
                 .strokeBorder(.white.opacity(0.15))
         )
         .animation(.easeOut(duration: 0.12), value: item.isHovered)
+        .onChange(of: item.isHovered) { _, hovered in
+            if hovered, shareURL == nil {
+                shareURL = handlers.fileForDrag()
+            }
+        }
     }
 }
 
@@ -101,14 +115,22 @@ struct CornerButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.system(size: 11, weight: .bold))
-                .frame(width: 24, height: 24)
-                .background(.white.opacity(0.9), in: Circle())
-                .foregroundStyle(.black)
+            CornerIcon(systemImage: systemImage)
         }
         .buttonStyle(.plain)
         .help(help)
+    }
+}
+
+struct CornerIcon: View {
+    let systemImage: String
+
+    var body: some View {
+        Image(systemName: systemImage)
+            .font(.system(size: 11, weight: .bold))
+            .frame(width: 24, height: 24)
+            .background(.white.opacity(0.9), in: Circle())
+            .foregroundStyle(.black)
     }
 }
 

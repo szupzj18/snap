@@ -22,6 +22,7 @@ final class PinController {
             }
         }
         panel.onEdit = { [weak self] in self?.editors.edit(capture) }
+        panel.fileForShare = { [weak self] in try? self?.actions.draggableFile(for: capture, savedURL: nil) }
         panel.onClose = { [weak self, weak panel] in
             guard let panel else { return }
             panel.orderOut(nil)
