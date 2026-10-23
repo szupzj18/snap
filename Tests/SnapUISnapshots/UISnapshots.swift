@@ -85,6 +85,19 @@ final class UISnapshots: SnapshotTestCase {
         try await Snapshot.capture(controller.window!, name: "editor-crop")
     }
 
+    /// The trim window with AVKit's trim bar open over a made-up recording.
+    @MainActor
+    func testTrim() async throws {
+        let url = try await FakeContent.movie()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let trimmer = TrimWindowController(url: url) { _ in }
+        trimmer.window.setFrameOrigin(CGPoint(x: -20000, y: -20000))
+        trimmer.window.orderFrontRegardless()
+        let trimming = Task { await trimmer.beginTrimming() }
+        try await Snapshot.capture(trimmer.window, name: "trim")
+        trimming.cancel()
+    }
+
     /// The history window with a handful of captures of different shapes.
     @MainActor
     func testHistory() async throws {

@@ -92,8 +92,8 @@ struct QuickAccessCardView: View {
                     Spacer()
                     OverlayIconButton(systemImage: "text.viewfinder", help: "Copy text (OCR)", action: handlers.copyText)
                 } else {
-                    // Clicking a recording's thumbnail plays it too; this says so.
-                    OverlayIconButton(systemImage: "play.fill", help: "Play", action: handlers.edit)
+                    // Clicking the thumbnail plays the recording.
+                    OverlayIconButton(systemImage: "scissors", help: "Trim", action: handlers.trim)
                     Spacer()
                     OverlayIconButton(systemImage: "photo.stack", help: "Save as GIF", action: handlers.exportGIF)
                 }

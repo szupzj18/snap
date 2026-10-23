@@ -33,6 +33,7 @@ final class QuickAccessController {
     private let editors: EditorPresenter
     /// Oldest first.
     private var cards: [QuickAccessCard] = []
+    private var trimming: TrimWindowController?
     private let maximumCards = 5
 
     init(settings: AppSettings, actions: CaptureActions, pins: PinController, editors: EditorPresenter) {
@@ -155,6 +156,10 @@ final class QuickAccessController {
             },
             copyText: {},
             pin: {},
+            trim: { [weak self, weak item] in
+                guard let self, let item, let recording = item.recording, let url = item.videoURL else { return }
+                self.trim(item, recording: recording, url: url)
+            },
             exportGIF: { [weak self, weak item] in
                 guard let self, let item, let url = item.videoURL else { return }
                 let date = item.capture.date
@@ -174,6 +179,29 @@ final class QuickAccessController {
                 self.close(item)
             }
         )
+    }
+
+    /// Trims in place, then swaps the card for one showing the new length and first frame.
+    private func trim(_ item: QuickAccessItem, recording: Recording, url: URL) {
+        let saved = item.savedURL != nil
+        close(item)
+        let trimmer = TrimWindowController(url: url) { [weak self] trimmed in
+            guard let self else { return }
+            self.trimming = nil
+            Task {
+                do {
+                    var updated = try await Recording.load(url: url, scale: recording.scale,
+                                                           sourceRect: recording.sourceRect, displayID: recording.displayID)
+                    updated.url = url
+                    self.show(updated, saved: saved)
+                    if trimmed { Toast.show("Trimmed to \(Recording.formatDuration(updated.duration))", systemImage: "scissors") }
+                } catch {
+                    ErrorPresenter.present(error)
+                }
+            }
+        }
+        trimming = trimmer
+        trimmer.present()
     }
 
     private func perform(_ action: () throws -> Void) {
@@ -224,6 +252,7 @@ struct QuickAccessHandlers {
     let edit: () -> Void
     let copyText: () -> Void
     let pin: () -> Void
+    var trim: () -> Void = {}
     var exportGIF: () -> Void = {}
     let close: () -> Void
     let fileForDrag: () -> URL?
