@@ -156,4 +156,41 @@ final class EditorCanvasInteractionTests: XCTestCase {
         state.tool = .arrow
         XCTAssertEqual(state.shownTool(for: AnnotationTool.groups[0]), .ellipse)
     }
+
+    func testDrawingLandsRightWhenZoomedIn() {
+        // At 200 % the 200×150 image is 400×300 points: exactly the canvas, so view = 2 × image.
+        canvas.setZoom(2)
+        state.tool = .rectangle
+        canvas.mouseDown(with: zoomedMouse(.leftMouseDown, 40, 40))
+        canvas.mouseDragged(with: zoomedMouse(.leftMouseDragged, 140, 100))
+        canvas.mouseUp(with: zoomedMouse(.leftMouseUp, 140, 100))
+        XCTAssertEqual(document.annotations.last?.shape, .rectangle(CGRect(x: 20, y: 20, width: 50, height: 30)))
+    }
+
+    func testZoomKeepsThePointUnderTheAnchor() {
+        // Fit is 100 % here (the image is smaller than the canvas): image pixel (50, 50) is at view (150, 125).
+        canvas.setZoom(3, around: CGPoint(x: 150, y: 125))
+        state.tool = .counter
+        canvas.mouseDown(with: zoomedMouse(.leftMouseDown, 150, 125))
+        guard case let .counter(center, _, _)? = document.annotations.last?.shape else { return XCTFail("no counter") }
+        XCTAssertEqual(center.x, 50, accuracy: 0.5)
+        XCTAssertEqual(center.y, 50, accuracy: 0.5)
+    }
+
+    func testCommandZeroFitsAgain() {
+        canvas.setZoom(4)
+        XCTAssertEqual(state.zoom, 4)
+        let zeroKey = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: .command, timestamp: 0,
+                                       windowNumber: window.windowNumber, context: nil, characters: "0",
+                                       charactersIgnoringModifiers: "0", isARepeat: false, keyCode: 29)!
+        window.makeFirstResponder(canvas)
+        XCTAssertTrue(canvas.performKeyEquivalent(with: zeroKey))
+        XCTAssertNil(state.zoom)
+    }
+
+    /// View coordinates (flipped, top-left) to window coordinates.
+    private func zoomedMouse(_ type: NSEvent.EventType, _ x: CGFloat, _ y: CGFloat) -> NSEvent {
+        NSEvent.mouseEvent(with: type, location: CGPoint(x: x, y: 300 - y), modifierFlags: [], timestamp: 0,
+                           windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!
+    }
 }

@@ -103,6 +103,10 @@ final class EditorState: ObservableObject {
     }
     @Published var color: RGBA = .red
     @Published var size: AnnotationSize = .medium
+    /// View points per image point; nil fits the image in the window.
+    @Published var zoom: CGFloat?
+    /// The zoom actually shown (the fit value when `zoom` is nil), for the toolbar.
+    @Published var displayedZoom: CGFloat = 1
     /// What each grouped toolbar button shows: the tool last used from that group.
     @Published private(set) var lastInGroup: [Int: AnnotationTool] = [:]
 

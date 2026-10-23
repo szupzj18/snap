@@ -29,6 +29,8 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
     private var cropDraft: CGRect?
     /// The pen stroke so far.
     private var penPoints: [CGPoint] = []
+    /// How far a zoomed-in canvas is scrolled from centered, in view points.
+    private var pan: CGPoint = .zero
     /// The text annotation being re-edited; hidden while its field is open.
     private var editingTextID: Annotation.ID?
 
@@ -62,6 +64,13 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
         // Published values arrive before they're stored, so use the value passed in.
         state.$color
             .sink { [weak self] color in self?.updateSelection { $0.color = color } }
+            .store(in: &observations)
+        state.$zoom
+            .sink { [weak self] zoom in
+                if zoom == nil { self?.pan = .zero }
+                self?.commitText()
+                self?.needsDisplay = true
+            }
             .store(in: &observations)
         state.$size
             .sink { [weak self] size in
@@ -98,12 +107,91 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
     /// Everything drawn, in view coordinates: the background canvas if there is one, otherwise the
     /// screenshot. Fitted with a margin, never larger than its point size.
     private var canvasRect: CGRect {
+        let size = canvasPointSize
+        let zoom = state.zoom ?? fitZoom
+        let shown = CGSize(width: size.width * zoom, height: size.height * zoom)
+        let offset = clamped(pan, for: shown)
+        return CGRect(x: bounds.midX - shown.width / 2 + offset.x, y: bounds.midY - shown.height / 2 + offset.y,
+                      width: shown.width, height: shown.height).integral
+    }
+
+    /// The whole drawing (background included) in image points.
+    private var canvasPointSize: CGSize {
         let pixels = backdropLayout?.canvasSize ?? shownRect.size
-        let pointSize = CGSize(width: pixels.width / document.scale, height: pixels.height / document.scale)
+        return CGSize(width: pixels.width / document.scale, height: pixels.height / document.scale)
+    }
+
+    /// The zoom that fits the drawing in the view with a margin, never above 100 %.
+    private var fitZoom: CGFloat {
+        let size = canvasPointSize
         let available = bounds.insetBy(dx: 24, dy: 24)
-        let fit = min(1, available.width / pointSize.width, available.height / pointSize.height)
-        let size = CGSize(width: pointSize.width * fit, height: pointSize.height * fit)
-        return CGRect(x: bounds.midX - size.width / 2, y: bounds.midY - size.height / 2, width: size.width, height: size.height).integral
+        return max(min(1, available.width / size.width, available.height / size.height), 0.01)
+    }
+
+    /// Keeps a zoomed-in drawing from being scrolled out of sight; centers one that fits.
+    private func clamped(_ pan: CGPoint, for size: CGSize) -> CGPoint {
+        let limitX = max((size.width - bounds.width) / 2 + 24, 0)
+        let limitY = max((size.height - bounds.height) / 2 + 24, 0)
+        return CGPoint(x: min(max(pan.x, -limitX), limitX), y: min(max(pan.y, -limitY), limitY))
+    }
+
+    // MARK: Zoom
+
+    static let zoomLevels: [CGFloat] = [0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 6, 8]
+
+    /// Zooms so that whatever is under `anchor` (view coordinates) stays put.
+    func setZoom(_ newZoom: CGFloat?, around anchor: CGPoint? = nil) {
+        let oldRect = canvasRect
+        let anchor = anchor ?? CGPoint(x: bounds.midX, y: bounds.midY)
+        guard let newZoom else {
+            pan = .zero
+            state.zoom = nil
+            return
+        }
+        let zoom = min(max(newZoom, 0.1), 8)
+        let factor = zoom / (oldRect.width / canvasPointSize.width)
+        // Where the drawing's origin must go for the anchor to stay over the same pixel.
+        let origin = CGPoint(x: anchor.x - (anchor.x - oldRect.minX) * factor, y: anchor.y - (anchor.y - oldRect.minY) * factor)
+        let size = CGSize(width: canvasPointSize.width * zoom, height: canvasPointSize.height * zoom)
+        pan = CGPoint(x: origin.x - (bounds.midX - size.width / 2), y: origin.y - (bounds.midY - size.height / 2))
+        state.zoom = zoom
+    }
+
+    func zoomIn() {
+        let current = state.zoom ?? fitZoom
+        setZoom(Self.zoomLevels.first { $0 > current + 0.001 } ?? 8)
+    }
+
+    func zoomOut() {
+        let current = state.zoom ?? fitZoom
+        setZoom(Self.zoomLevels.last { $0 < current - 0.001 } ?? 0.1)
+    }
+
+    override func magnify(with event: NSEvent) {
+        let current = state.zoom ?? fitZoom
+        setZoom(current * (1 + event.magnification), around: convert(event.locationInWindow, from: nil))
+    }
+
+    /// Two-finger scrolling moves a zoomed-in drawing around.
+    override func scrollWheel(with event: NSEvent) {
+        guard state.zoom != nil else { return super.scrollWheel(with: event) }
+        let size = canvasRect.size
+        pan = clamped(CGPoint(x: pan.x + event.scrollingDeltaX, y: pan.y + event.scrollingDeltaY), for: size)
+        commitText()
+        needsDisplay = true
+    }
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        guard event.modifierFlags.intersection([.command, .control, .option]) == .command,
+              window?.firstResponder === self else { return super.performKeyEquivalent(with: event) }
+        switch event.charactersIgnoringModifiers {
+        case "=", "+": zoomIn()
+        case "-": zoomOut()
+        case "0": setZoom(nil)
+        case "1": setZoom(1)
+        default: return super.performKeyEquivalent(with: event)
+        }
+        return true
     }
 
     /// Where `shownRect` is drawn, in view coordinates.
@@ -146,6 +234,10 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
     // MARK: Drawing
 
     override func draw(_ dirtyRect: NSRect) {
+        let shownZoom = canvasRect.width / canvasPointSize.width
+        if abs(state.displayedZoom - shownZoom) > 0.001 {
+            DispatchQueue.main.async { [state] in state.displayedZoom = shownZoom }
+        }
         NSColor.underPageBackgroundColor.setFill()
         bounds.fill()
         guard let context = NSGraphicsContext.current?.cgContext else { return }
