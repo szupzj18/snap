@@ -11,6 +11,40 @@ final class AnnotationRendererTests: XCTestCase {
         XCTAssertEqual(Pixels.at(output, x: 5, y: 17), [0, 0, 255, 255])
     }
 
+    func testSpotlightDimsOutsideOnlyAndUnionsOverlaps() throws {
+        let base = Pixels.solid(width: 100, height: 100)
+        let spots = [
+            Annotation(shape: .spotlight(CGRect(x: 10, y: 10, width: 40, height: 40)), color: .red, lineWidth: 0),
+            Annotation(shape: .spotlight(CGRect(x: 30, y: 30, width: 40, height: 40)), color: .red, lineWidth: 0),
+        ]
+        let output = try XCTUnwrap(AnnotationRenderer(base: base, scale: 1).export(spots))
+        XCTAssertEqual(Pixels.at(output, x: 20, y: 25), [255, 255, 255, 255], "inside the first")
+        XCTAssertEqual(Pixels.at(output, x: 40, y: 40), [255, 255, 255, 255], "where they overlap")
+        XCTAssertLessThan(Pixels.at(output, x: 90, y: 5)[0], 140, "outside is dimmed")
+    }
+
+    func testPixelateOutsideASpotlightIsDimmedToo() throws {
+        let base = Pixels.solid(width: 100, height: 100)
+        let annotations = [
+            Annotation(shape: .spotlight(CGRect(x: 0, y: 0, width: 30, height: 30)), color: .red, lineWidth: 0),
+            Annotation(shape: .pixelate(CGRect(x: 50, y: 50, width: 40, height: 40)), color: .red, lineWidth: 0),
+        ]
+        let output = try XCTUnwrap(AnnotationRenderer(base: base, scale: 1).export(annotations))
+        XCTAssertLessThan(Pixels.at(output, x: 70, y: 70)[0], 140)
+    }
+
+    func testEllipseAndPenPaintPixels() throws {
+        let base = Pixels.solid(width: 100, height: 100)
+        let annotations = [
+            Annotation(shape: .ellipse(CGRect(x: 10, y: 10, width: 80, height: 40)), color: .blue, lineWidth: 4),
+            Annotation(shape: .freehand([CGPoint(x: 10, y: 80), CGPoint(x: 50, y: 70), CGPoint(x: 90, y: 80)]), color: .red, lineWidth: 4),
+        ]
+        let output = try XCTUnwrap(AnnotationRenderer(base: base, scale: 1).export(annotations))
+        XCTAssertLessThan(Pixels.at(output, x: 50, y: 10)[0], 100, "ellipse top")
+        XCTAssertEqual(Pixels.at(output, x: 50, y: 30), [255, 255, 255, 255], "ellipse inside untouched")
+        XCTAssertLessThan(Pixels.at(output, x: 10, y: 80)[1], 100, "pen stroke start")
+    }
+
     func testExportHonoursCrop() throws {
         // Red on top, blue below; crop to the bottom-right quarter.
         let base = Pixels.halves(width: 20, height: 20)

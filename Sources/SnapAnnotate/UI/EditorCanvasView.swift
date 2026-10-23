@@ -27,6 +27,8 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
 
     /// The crop being dragged out, before it's committed on mouse up.
     private var cropDraft: CGRect?
+    /// The pen stroke so far.
+    private var penPoints: [CGPoint] = []
     /// The text annotation being re-edited; hidden while its field is open.
     private var editingTextID: Annotation.ID?
 
@@ -320,6 +322,9 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
         case .crop:
             dragStart = point
             cropDraft = nil
+        case .pen:
+            dragStart = point
+            penPoints = [point]
         default:
             dragStart = point
         }
@@ -348,6 +353,14 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
         switch state.tool {
         case .arrow: shape = .arrow(from: start, to: shift ? Self.snapped(point, from: start) : point)
         case .rectangle: shape = .rectangle(rect)
+        case .ellipse: shape = .ellipse(rect)
+        case .line: shape = .line(from: start, to: shift ? Self.snapped(point, from: start) : point)
+        case .spotlight: shape = .spotlight(rect)
+        case .pen:
+            // Skip points closer than about a screen point; they only add jitter.
+            if let last = penPoints.last, hypot(point.x - last.x, point.y - last.y) < 1.5 / viewScale { return }
+            penPoints.append(point)
+            shape = .freehand(penPoints)
         case .highlight: shape = .highlight(rect)
         case .pixelate: shape = .pixelate(rect)
         case .blur: shape = .blur(rect)
@@ -397,8 +410,11 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
     /// Ignore accidental clicks that would leave a speck.
     private static func isBigEnough(_ shape: AnnotationShape) -> Bool {
         switch shape {
-        case let .arrow(from, to): hypot(to.x - from.x, to.y - from.y) > 6
-        case let .rectangle(rect), let .highlight(rect), let .pixelate(rect), let .blur(rect): rect.width > 3 && rect.height > 3
+        case let .arrow(from, to), let .line(from, to): hypot(to.x - from.x, to.y - from.y) > 6
+        case let .rectangle(rect), let .ellipse(rect), let .highlight(rect), let .pixelate(rect), let .blur(rect):
+            rect.width > 3 && rect.height > 3
+        case let .spotlight(rect): rect.width > 8 && rect.height > 8
+        case let .freehand(points): points.count > 1
         case .text, .counter: true
         }
     }

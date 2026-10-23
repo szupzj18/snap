@@ -40,6 +40,23 @@ final class AnnotationGeometryTests: XCTestCase {
         XCTAssertFalse(text.contains(CGPoint(x: 5, y: 5), tolerance: 0))
     }
 
+    func testEllipseHitsOnOutlineOnly() {
+        let ellipse = make(.ellipse(CGRect(x: 0, y: 0, width: 100, height: 50)))
+        XCTAssertTrue(ellipse.contains(CGPoint(x: 50, y: 1), tolerance: 2))
+        XCTAssertFalse(ellipse.contains(CGPoint(x: 50, y: 25), tolerance: 2), "center")
+        XCTAssertFalse(ellipse.contains(CGPoint(x: 2, y: 2), tolerance: 2), "bounding box corner")
+    }
+
+    func testPenAndLineHitNearTheStroke() {
+        let pen = make(.freehand([CGPoint(x: 0, y: 0), CGPoint(x: 50, y: 0), CGPoint(x: 50, y: 50)]))
+        XCTAssertTrue(pen.contains(CGPoint(x: 52, y: 25), tolerance: 1))
+        XCTAssertFalse(pen.contains(CGPoint(x: 20, y: 30), tolerance: 1))
+        let line = make(.line(from: .zero, to: CGPoint(x: 100, y: 100)))
+        XCTAssertTrue(line.contains(CGPoint(x: 50, y: 52), tolerance: 1))
+        XCTAssertEqual(pen.moved(by: CGVector(dx: 1, dy: 2)).shape,
+                       .freehand([CGPoint(x: 1, y: 2), CGPoint(x: 51, y: 2), CGPoint(x: 51, y: 52)]))
+    }
+
     func testMovedShiftsEveryPoint() {
         let delta = CGVector(dx: 5, dy: -3)
         XCTAssertEqual(make(.arrow(from: .zero, to: CGPoint(x: 10, y: 10))).moved(by: delta).shape,

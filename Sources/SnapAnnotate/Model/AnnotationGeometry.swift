@@ -8,9 +8,16 @@ extension Annotation {
         case let .arrow(from, to):
             return CGRect(x: min(from.x, to.x), y: min(from.y, to.y), width: abs(to.x - from.x), height: abs(to.y - from.y))
                 .insetBy(dx: -pad * 3, dy: -pad * 3)
-        case let .rectangle(rect):
+        case let .rectangle(rect), let .ellipse(rect):
             return rect.insetBy(dx: -pad, dy: -pad)
-        case let .highlight(rect), let .pixelate(rect), let .blur(rect):
+        case let .line(from, to):
+            return CGRect(x: min(from.x, to.x), y: min(from.y, to.y), width: abs(to.x - from.x), height: abs(to.y - from.y))
+                .insetBy(dx: -pad, dy: -pad)
+        case let .freehand(points):
+            let xs = points.map(\.x), ys = points.map(\.y)
+            guard let minX = xs.min(), let maxX = xs.max(), let minY = ys.min(), let maxY = ys.max() else { return .null }
+            return CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY).insetBy(dx: -pad, dy: -pad)
+        case let .highlight(rect), let .pixelate(rect), let .blur(rect), let .spotlight(rect):
             return rect
         case let .text(origin, string, fontSize):
             let size = AnnotationRenderer.attributedText(string, fontSize: fontSize, color: color).size()
@@ -30,7 +37,16 @@ extension Annotation {
         case let .rectangle(rect):
             return rect.insetBy(dx: -reach, dy: -reach).contains(point)
                 && !rect.insetBy(dx: reach, dy: reach).contains(point)
-        case let .highlight(rect), let .pixelate(rect), let .blur(rect):
+        case let .ellipse(rect):
+            // On the outline: inside the ellipse grown by `reach`, outside the one shrunk by it.
+            return Self.ellipse(rect.insetBy(dx: -reach, dy: -reach), contains: point)
+                && !Self.ellipse(rect.insetBy(dx: reach, dy: reach), contains: point)
+        case let .line(from, to):
+            return Self.distance(from: point, toSegment: from, to) <= reach
+        case let .freehand(points):
+            guard points.count > 1 else { return points.first.map { hypot(point.x - $0.x, point.y - $0.y) <= reach } ?? false }
+            return zip(points, points.dropFirst()).contains { Self.distance(from: point, toSegment: $0, $1) <= reach }
+        case let .highlight(rect), let .pixelate(rect), let .blur(rect), let .spotlight(rect):
             return rect.insetBy(dx: -tolerance, dy: -tolerance).contains(point)
         case .text:
             return bounds.insetBy(dx: -tolerance, dy: -tolerance).contains(point)
@@ -46,6 +62,10 @@ extension Annotation {
         switch shape {
         case let .arrow(from, to): copy.shape = .arrow(from: shift(from), to: shift(to))
         case let .rectangle(rect): copy.shape = .rectangle(shift(rect))
+        case let .ellipse(rect): copy.shape = .ellipse(shift(rect))
+        case let .line(from, to): copy.shape = .line(from: shift(from), to: shift(to))
+        case let .freehand(points): copy.shape = .freehand(points.map(shift))
+        case let .spotlight(rect): copy.shape = .spotlight(shift(rect))
         case let .highlight(rect): copy.shape = .highlight(shift(rect))
         case let .pixelate(rect): copy.shape = .pixelate(shift(rect))
         case let .blur(rect): copy.shape = .blur(shift(rect))
@@ -63,12 +83,19 @@ extension Annotation {
             copy.shape = .text(origin: origin, string: string, fontSize: size.fontSize * scale)
         case let .counter(center, number, _):
             copy.shape = .counter(center: center, number: number, radius: size.counterRadius * scale)
-        case .arrow, .rectangle:
+        case .arrow, .rectangle, .ellipse, .line, .freehand:
             copy.lineWidth = size.lineWidth * scale
-        case .highlight, .pixelate, .blur:
+        case .highlight, .pixelate, .blur, .spotlight:
             break
         }
         return copy
+    }
+
+    static func ellipse(_ rect: CGRect, contains point: CGPoint) -> Bool {
+        guard rect.width > 0, rect.height > 0 else { return false }
+        let dx = (point.x - rect.midX) / (rect.width / 2)
+        let dy = (point.y - rect.midY) / (rect.height / 2)
+        return dx * dx + dy * dy <= 1
     }
 
     static func distance(from point: CGPoint, toSegment a: CGPoint, _ b: CGPoint) -> CGFloat {

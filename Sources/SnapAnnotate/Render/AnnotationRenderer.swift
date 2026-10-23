@@ -28,9 +28,39 @@ public final class AnnotationRenderer {
 
     public func draw(_ annotations: [Annotation], in context: CGContext) {
         drawImage(base, in: CGRect(origin: .zero, size: imageSize), context: context)
-        for annotation in annotations {
-            draw(annotation, in: context)
+        // Layers: changes to the image itself (pixelate, blur), then the spotlights' dimming,
+        // then everything drawn on top, which stays bright.
+        let (changes, marks) = annotations.reduce(into: ([Annotation](), [Annotation]())) { parts, annotation in
+            switch annotation.shape {
+            case .pixelate, .blur: parts.0.append(annotation)
+            default: parts.1.append(annotation)
+            }
         }
+        changes.forEach { draw($0, in: context) }
+        let spots = marks.compactMap { annotation -> CGRect? in
+            if case let .spotlight(rect) = annotation.shape { return rect }
+            return nil
+        }
+        if !spots.isEmpty {
+            drawSpotlights(spots, in: context)
+        }
+        marks.forEach { draw($0, in: context) }
+    }
+
+    /// Dims the whole image except the union of `spots`.
+    private func drawSpotlights(_ spots: [CGRect], in context: CGContext) {
+        context.saveGState()
+        context.beginTransparencyLayer(auxiliaryInfo: nil)
+        context.setFillColor(CGColor(gray: 0, alpha: 0.55))
+        context.fill(CGRect(origin: .zero, size: imageSize))
+        context.setBlendMode(.clear)
+        for spot in spots {
+            let radius = min(8 * scale, spot.width / 2, spot.height / 2)
+            context.addPath(CGPath(roundedRect: spot, cornerWidth: radius, cornerHeight: radius, transform: nil))
+            context.fillPath()
+        }
+        context.endTransparencyLayer()
+        context.restoreGState()
     }
 
     /// The flattened result at full resolution, limited to `crop` (image pixels) if given.
@@ -64,6 +94,29 @@ public final class AnnotationRenderer {
             context.setLineJoin(.round)
             context.addPath(CGPath(roundedRect: rect, cornerWidth: width, cornerHeight: width, transform: nil))
             context.strokePath()
+
+        case let .ellipse(rect):
+            context.setStrokeColor(color)
+            context.setLineWidth(width)
+            context.strokeEllipse(in: rect)
+
+        case let .line(from, to):
+            context.setStrokeColor(color)
+            context.setLineWidth(width)
+            context.setLineCap(.round)
+            context.strokeLineSegments(between: [from, to])
+
+        case let .freehand(points):
+            context.setStrokeColor(color)
+            context.setLineWidth(width)
+            context.setLineCap(.round)
+            context.setLineJoin(.round)
+            context.addPath(Self.smoothPath(through: points))
+            context.strokePath()
+
+        case .spotlight:
+            // Drawn for all spotlights at once, before everything else.
+            break
 
         case let .highlight(rect):
             context.setBlendMode(.multiply)
@@ -101,6 +154,25 @@ public final class AnnotationRenderer {
                 label.draw(at: CGPoint(x: center.x - size.width / 2, y: center.y - size.height / 2))
             }
         }
+    }
+
+    /// A curve through the midpoints of successive points, which smooths out mouse jitter.
+    static func smoothPath(through points: [CGPoint]) -> CGPath {
+        let path = CGMutablePath()
+        guard let first = points.first else { return path }
+        path.move(to: first)
+        guard points.count > 2 else {
+            points.dropFirst().forEach { path.addLine(to: $0) }
+            if points.count == 1 { path.addLine(to: first) }
+            return path
+        }
+        for index in 1..<(points.count - 1) {
+            let point = points[index]
+            let next = points[index + 1]
+            path.addQuadCurve(to: CGPoint(x: (point.x + next.x) / 2, y: (point.y + next.y) / 2), control: point)
+        }
+        path.addLine(to: points[points.count - 1])
+        return path
     }
 
     /// Text attributes shared with the editor's live text field.

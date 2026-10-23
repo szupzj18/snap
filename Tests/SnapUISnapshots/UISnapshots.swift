@@ -71,6 +71,10 @@ final class UISnapshots: SnapshotTestCase {
         document.add(Annotation(shape: .text(origin: CGPoint(x: 1050, y: 700), string: "Fixed in 0.2", fontSize: 48), color: .red, lineWidth: 0))
         document.add(Annotation(shape: .pixelate(CGRect(x: 160, y: 300, width: 420, height: 160)), color: .red, lineWidth: 0))
         document.add(Annotation(shape: .counter(center: CGPoint(x: 1700, y: 1000), number: 1, radius: 30), color: .blue, lineWidth: 0))
+        document.add(Annotation(shape: .spotlight(CGRect(x: 980, y: 280, width: 640, height: 380)), color: .red, lineWidth: 0))
+        document.add(Annotation(shape: .ellipse(CGRect(x: 1560, y: 900, width: 280, height: 200)), color: .orange, lineWidth: 10))
+        document.add(Annotation(shape: .freehand((0..<40).map { CGPoint(x: 300 + CGFloat($0) * 12, y: 1180 + sin(CGFloat($0) / 3) * 30) }),
+                                color: .purple, lineWidth: 10))
         try await Snapshot.capture(controller.window!, name: "editor")
     }
 
