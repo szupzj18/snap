@@ -76,7 +76,8 @@ Keyboard Shortcuts › Screenshots.
 
 In the editor: V select, C crop, A arrow, R rectangle, O ellipse, L line, D pen, T text,
 H highlight, P pixelate, B blur, S spotlight, N counter;
-⌘Z / ⇧⌘Z undo and redo; ⌘C copy; ⌘S save. With something selected, Delete removes it and
+⌘Z / ⇧⌘Z undo and redo; ⌘C copy; ⌘S save; pinch or ⌘= / ⌘- to zoom, ⌘0 to fit, ⌘1 for 100 %,
+two-finger scroll to move around when zoomed in. With something selected, Delete removes it and
 Esc deselects.
 
 ## Requirements

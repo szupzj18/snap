@@ -250,6 +250,19 @@ private struct EditorToolbar: View {
 
             Divider().frame(height: 20)
 
+            Menu {
+                Button("Fit in Window  ⌘0") { state.zoom = nil }
+                ForEach([0.5, 1, 2] as [CGFloat], id: \.self) { level in
+                    Button("\(Int(level * 100))%" + (level == 1 ? "  ⌘1" : "")) { state.zoom = level }
+                }
+            } label: {
+                Text("\(Int((state.displayedZoom * 100).rounded()))%")
+                    .monospacedDigit()
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
+            .help("Zoom (pinch, ⌘= / ⌘-, ⌘0 to fit)")
+
             Button(action: document.undo) { Image(systemName: "arrow.uturn.backward") }
                 .disabled(!document.canUndo)
                 .help("Undo (⌘Z)")
