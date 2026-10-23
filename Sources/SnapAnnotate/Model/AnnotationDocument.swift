@@ -11,6 +11,8 @@ public final class AnnotationDocument: ObservableObject {
     /// The part of the image to keep, in image pixels; nil keeps all of it. Annotations stay in
     /// full-image coordinates, so widening the crop later brings them back.
     @Published public private(set) var crop: CGRect?
+    /// The sharing background. A way of presenting the result rather than an edit, so not undoable.
+    @Published public var backdrop = Backdrop()
     @Published public private(set) var canUndo = false
     @Published public private(set) var canRedo = false
 
@@ -32,7 +34,7 @@ public final class AnnotationDocument: ObservableObject {
     /// What's shown and exported: the crop, or the whole image.
     public var visibleRect: CGRect { crop ?? CGRect(origin: .zero, size: imageSize) }
 
-    public var isEdited: Bool { !annotations.isEmpty || crop != nil }
+    public var isEdited: Bool { !annotations.isEmpty || crop != nil || backdrop.isEnabled }
 
     public func add(_ annotation: Annotation) {
         apply(Snapshot(annotations: annotations + [annotation], crop: crop))

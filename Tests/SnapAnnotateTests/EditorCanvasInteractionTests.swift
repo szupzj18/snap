@@ -121,9 +121,20 @@ final class EditorCanvasInteractionTests: XCTestCase {
         let field = try XCTUnwrap(canvas.subviews.compactMap { $0 as? NSTextField }.first)
         XCTAssertEqual(field.stringValue, "Hello")
         field.stringValue = "Hello again"
-        canvas.control(field, textView: NSTextView(), doCommandBy: #selector(NSResponder.insertNewline(_:)))
+        _ = canvas.control(field, textView: NSTextView(), doCommandBy: #selector(NSResponder.insertNewline(_:)))
         XCTAssertEqual(document.annotations.last?.id, text.id, "replaced, not added")
         XCTAssertEqual(document.annotations.last?.shape, .text(origin: CGPoint(x: 20, y: 100), string: "Hello again", fontSize: 20))
         XCTAssertEqual(document.annotations.count, 2)
+    }
+
+    func testDrawingStillLandsRightWithABackground() {
+        // 200×150 px at 1x with 40 pt padding: a 280×230 canvas, centered in 400×300, so the
+        // screenshot sits at (100, 75) again and points map one to one.
+        document.backdrop = Backdrop(isEnabled: true, fill: .solid(.white), padding: 40, cornerRadius: 0, shadow: 0)
+        state.tool = .rectangle
+        canvas.mouseDown(with: mouse(.leftMouseDown, 120, 20))
+        canvas.mouseDragged(with: mouse(.leftMouseDragged, 170, 60))
+        canvas.mouseUp(with: mouse(.leftMouseUp, 170, 60))
+        XCTAssertEqual(document.annotations.last?.shape, .rectangle(CGRect(x: 120, y: 20, width: 50, height: 40)))
     }
 }
