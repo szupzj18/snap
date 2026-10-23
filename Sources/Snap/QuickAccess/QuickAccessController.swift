@@ -111,7 +111,11 @@ final class QuickAccessController {
             },
             close: { [weak self, weak item] in
                 guard let self, let item else { return }
-                self.close(item)
+                if NSEvent.modifierFlags.contains(.option) {
+                    self.closeAll()
+                } else {
+                    self.close(item)
+                }
             },
             fileForDrag: { [weak self, weak item] in
                 guard let self, let item else { return nil }
@@ -158,7 +162,11 @@ final class QuickAccessController {
             },
             close: { [weak self, weak item] in
                 guard let self, let item else { return }
-                self.close(item)
+                if NSEvent.modifierFlags.contains(.option) {
+                    self.closeAll()
+                } else {
+                    self.close(item)
+                }
             },
             fileForDrag: { [weak item] in item?.videoURL },
             dragEnded: { [weak self, weak item] in
@@ -184,10 +192,16 @@ final class QuickAccessController {
         layout(appearing: nil)
     }
 
+    func closeAll() {
+        let closing = cards
+        cards = []
+        closing.forEach { $0.dismiss() }
+    }
+
     /// Newest card at the bottom, older ones pushed up, per screen.
     private func layout(appearing newCard: QuickAccessCard?) {
-        let margin: CGFloat = 16
-        let spacing: CGFloat = 12
+        let margin: CGFloat = 20
+        let spacing: CGFloat = 10
         var nextY: [NSScreen: CGFloat] = [:]
         for card in cards.reversed() {
             let visible = card.screen.visibleFrame
@@ -242,11 +256,16 @@ final class QuickAccessCard {
         }
     }
 
-    /// Fits the thumbnail into a card no wider than 240pt and between 110 and 200pt tall.
-    private static func cardSize(for imageSize: CGSize) -> CGSize {
-        let width: CGFloat = 240
-        let aspect = imageSize.height / max(imageSize.width, 1)
-        return CGSize(width: width, height: min(max(width * aspect, 110), 200).rounded())
+    /// The image's own proportions, fitted into 236×160 pt. Very long or tall images are kept
+    /// from becoming slivers (they're cropped to fill the card instead).
+    static func cardSize(for imageSize: CGSize) -> CGSize {
+        let maximum = CGSize(width: 236, height: 160)
+        let aspect = imageSize.width / max(imageSize.height, 1)
+        var size = CGSize(width: maximum.width, height: maximum.width / aspect)
+        if size.height > maximum.height {
+            size = CGSize(width: maximum.height * aspect, height: maximum.height)
+        }
+        return CGSize(width: max(size.width, 96).rounded(), height: max(size.height, 72).rounded())
     }
 
     func startAutoClose(after seconds: TimeInterval) {
@@ -271,13 +290,16 @@ final class QuickAccessCard {
         }
     }
 
+    /// Fast start, long soft landing.
+    private static let settle = CAMediaTimingFunction(controlPoints: 0.16, 1, 0.3, 1)
+
     func slideIn(to frame: CGRect) {
-        panel.setFrame(frame.offsetBy(dx: frame.width + 40, dy: 0), display: false)
+        panel.setFrame(frame.offsetBy(dx: frame.width * 0.6, dy: 0), display: false)
         panel.alphaValue = 0
         panel.orderFrontRegardless()
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.25
-            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            context.duration = 0.42
+            context.timingFunction = Self.settle
             panel.animator().setFrame(frame, display: true)
             panel.animator().alphaValue = 1
         }
@@ -285,17 +307,21 @@ final class QuickAccessCard {
 
     func move(to frame: CGRect) {
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.2
+            context.duration = 0.32
+            context.timingFunction = Self.settle
             panel.animator().setFrame(frame, display: true)
         }
     }
 
+    /// Slides out to the right as it fades.
     func dismiss() {
         timer?.invalidate()
         hoverObservation = nil
         let panel = panel
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.2
+            context.duration = 0.22
+            context.timingFunction = CAMediaTimingFunction(name: .easeIn)
+            panel.animator().setFrame(panel.frame.offsetBy(dx: panel.frame.width * 0.5, dy: 0), display: true)
             panel.animator().alphaValue = 0
         } completionHandler: {
             panel.orderOut(nil)

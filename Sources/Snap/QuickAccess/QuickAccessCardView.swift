@@ -8,129 +8,186 @@ struct QuickAccessCardView: View {
     /// The file to share, made on first hover so an image isn't written out unless it's needed.
     @State private var shareURL: URL?
 
+    static let cornerRadius: CGFloat = 10
+
     var body: some View {
         ZStack {
+            // Behind images with transparency (window captures): glass, like other floating panels.
+            Rectangle().fill(.thinMaterial)
+
             DragSource(item: item, handlers: handlers)
+
+            if item.isHovered {
+                // Just enough to make white controls readable on any screenshot.
+                LinearGradient(
+                    colors: [.black.opacity(0.38), .black.opacity(0.18), .black.opacity(0.38)],
+                    startPoint: .top, endPoint: .bottom
+                )
+                .allowsHitTesting(false)
+                .transition(.opacity)
+
+                VStack(spacing: 6) {
+                    OverlayPillButton(title: "Copy", action: handlers.copy)
+                    OverlayPillButton(title: item.savedURL == nil ? "Save" : "Show in Finder", action: handlers.save)
+                }
+                .transition(.opacity.combined(with: .scale(scale: 0.96)))
+
+                corners
+                    .padding(6)
+                    .transition(.opacity)
+            }
 
             if let recording = item.recording, !item.isHovered {
                 VStack {
                     Spacer()
                     HStack {
-                        Label(Recording.formatDuration(recording.duration), systemImage: "video.fill")
-                            .font(.system(size: 11, weight: .semibold).monospacedDigit())
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3)
-                            .background(.black.opacity(0.6), in: Capsule())
-                            .foregroundStyle(.white)
+                        DurationBadge(duration: recording.duration)
                         Spacer()
                     }
                 }
-                .padding(6)
+                .padding(7)
                 .allowsHitTesting(false)
             }
-
-            if item.isHovered {
-                Color.black.opacity(0.4).allowsHitTesting(false)
-
-                VStack(spacing: 8) {
-                    PillButton(title: "Copy", action: handlers.copy)
-                    PillButton(title: item.savedURL == nil ? "Save" : "Show in Finder", action: handlers.save)
-                }
-
-                if item.recording != nil {
-                    // Clicking the thumbnail plays the recording; say so.
-                    Image(systemName: "play.circle.fill")
-                        .font(.system(size: 18))
-                        .foregroundStyle(.white.opacity(0.9))
-                        .offset(y: -52)
-                        .allowsHitTesting(false)
-                }
-
-                VStack {
-                    HStack {
-                        CornerButton(systemImage: "xmark", help: "Close", action: handlers.close)
-                        Spacer()
-                        if let shareURL {
-                            ShareLink(item: shareURL) {
-                                CornerIcon(systemImage: "square.and.arrow.up")
-                            }
-                            .buttonStyle(.plain)
-                            .help("Share")
-                        }
-                        if item.recording == nil {
-                            CornerButton(systemImage: "pin.fill", help: "Pin to screen", action: handlers.pin)
-                        }
-                    }
-                    Spacer()
-                    HStack {
-                        if item.recording == nil {
-                            CornerButton(systemImage: "pencil", help: "Annotate", action: handlers.edit)
-                            Spacer()
-                            CornerButton(systemImage: "text.viewfinder", help: "Copy text (OCR)", action: handlers.copyText)
-                        } else {
-                            Spacer()
-                            CornerButton(systemImage: "photo.stack", help: "Save as GIF", action: handlers.exportGIF)
-                        }
-                    }
-                }
-                .padding(6)
-            }
         }
-        .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous))
+        // A light inner edge and a dark outer one keep the card's outline crisp on any desktop.
         .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .strokeBorder(.white.opacity(0.15))
+            RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous)
+                .strokeBorder(.white.opacity(0.14), lineWidth: 1)
         )
-        .animation(.easeOut(duration: 0.12), value: item.isHovered)
+        .overlay(
+            RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous)
+                .stroke(.black.opacity(0.28), lineWidth: 0.5)
+        )
+        .environment(\.colorScheme, .dark)
+        .animation(.easeOut(duration: 0.14), value: item.isHovered)
         .onChange(of: item.isHovered) { _, hovered in
             if hovered, shareURL == nil {
                 shareURL = handlers.fileForDrag()
             }
         }
     }
+
+    /// Close and share on top; per-kind actions at the bottom.
+    private var corners: some View {
+        VStack {
+            HStack(spacing: 5) {
+                OverlayIconButton(systemImage: "xmark", help: "Close (⌥-click closes all)", action: handlers.close)
+                Spacer()
+                if let shareURL {
+                    ShareLink(item: shareURL) {
+                        OverlayIcon(systemImage: "square.and.arrow.up", isHighlighted: false)
+                    }
+                    .buttonStyle(OverlayPressStyle())
+                    .help("Share")
+                }
+                if item.recording == nil {
+                    OverlayIconButton(systemImage: "pin.fill", help: "Pin to screen", action: handlers.pin)
+                }
+            }
+            Spacer()
+            HStack(spacing: 5) {
+                if item.recording == nil {
+                    OverlayIconButton(systemImage: "pencil", help: "Annotate", action: handlers.edit)
+                    Spacer()
+                    OverlayIconButton(systemImage: "text.viewfinder", help: "Copy text (OCR)", action: handlers.copyText)
+                } else {
+                    // Clicking a recording's thumbnail plays it too; this says so.
+                    OverlayIconButton(systemImage: "play.fill", help: "Play", action: handlers.edit)
+                    Spacer()
+                    OverlayIconButton(systemImage: "photo.stack", help: "Save as GIF", action: handlers.exportGIF)
+                }
+            }
+        }
+    }
 }
 
-private struct PillButton: View {
+/// Shrinks a touch while pressed.
+private struct OverlayPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.94 : 1)
+            .animation(.easeOut(duration: 0.08), value: configuration.isPressed)
+    }
+}
+
+/// Copy / Save: small dark glass capsules with white text.
+private struct OverlayPillButton: View {
     let title: String
     let action: () -> Void
+    @State private var isHovered = false
 
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 13, weight: .semibold))
-                .frame(minWidth: 110)
-                .padding(.vertical, 6)
-                .background(.white.opacity(0.9), in: Capsule())
-                .foregroundStyle(.black)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .padding(.horizontal, 14)
+                .frame(minWidth: 82, minHeight: 24)
+                .background(
+                    // Dark glass: blurs what's behind and stays readable over light screenshots.
+                    Capsule().fill(.ultraThinMaterial)
+                        .overlay(Capsule().fill(.black.opacity(isHovered ? 0.32 : 0.5)))
+                )
+                .overlay(Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 0.5))
+                .shadow(color: .black.opacity(0.25), radius: 3, y: 1)
+                .contentShape(Capsule())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(OverlayPressStyle())
+        .onHover { isHovered = $0 }
     }
 }
 
-struct CornerButton: View {
+/// The small round buttons in the corners.
+private struct OverlayIconButton: View {
     let systemImage: String
     let help: String
     let action: () -> Void
+    @State private var isHovered = false
 
     var body: some View {
         Button(action: action) {
-            CornerIcon(systemImage: systemImage)
+            OverlayIcon(systemImage: systemImage, isHighlighted: isHovered)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(OverlayPressStyle())
+        .onHover { isHovered = $0 }
         .help(help)
     }
 }
 
-struct CornerIcon: View {
+private struct OverlayIcon: View {
     let systemImage: String
+    let isHighlighted: Bool
 
     var body: some View {
         Image(systemName: systemImage)
-            .font(.system(size: 11, weight: .bold))
-            .frame(width: 24, height: 24)
-            .background(.white.opacity(0.9), in: Circle())
-            .foregroundStyle(.black)
+            .font(.system(size: 10, weight: .bold))
+            .foregroundStyle(.white)
+            .frame(width: 22, height: 22)
+            .background(
+                Circle().fill(.ultraThinMaterial)
+                    .overlay(Circle().fill(.black.opacity(isHighlighted ? 0.32 : 0.5)))
+            )
+            .overlay(Circle().strokeBorder(.white.opacity(0.18), lineWidth: 0.5))
+            .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
+            .contentShape(Circle())
+    }
+}
+
+private struct DurationBadge: View {
+    let duration: TimeInterval
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "video.fill").font(.system(size: 8, weight: .bold))
+            Text(Recording.formatDuration(duration)).font(.system(size: 10.5, weight: .semibold).monospacedDigit())
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(Capsule().fill(.black.opacity(0.55)))
+        .overlay(Capsule().strokeBorder(.white.opacity(0.15), lineWidth: 0.5))
     }
 }
 
@@ -145,6 +202,7 @@ private struct DragSource: NSViewRepresentable {
         view.onHover = { [weak item] in item?.isHovered = $0 }
         view.fileForDrag = handlers.fileForDrag
         view.onDragEnded = handlers.dragEnded
+        view.onSwipe = handlers.close
         view.onClick = handlers.edit
         return view
     }
@@ -160,13 +218,18 @@ final class DragSourceView: NSView, NSDraggingSource {
 
     private let image: CGImage
     private var mouseDownEvent: NSEvent?
+    var onSwipe: (() -> Void)?
+    /// Sideways trackpad scrolling so far in the current gesture.
+    private var swipeDistance: CGFloat = 0
 
     init(image: CGImage) {
         self.image = image
         super.init(frame: .zero)
         wantsLayer = true
         layer?.contents = image
-        layer?.contentsGravity = .resizeAspect
+        // The card already has the image's proportions; fill covers any rounding difference.
+        layer?.contentsGravity = .resizeAspectFill
+        layer?.masksToBounds = true
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
@@ -203,6 +266,20 @@ final class DragSourceView: NSView, NSDraggingSource {
         let preview = NSImage(cgImage: image, size: bounds.size)
         draggingItem.setDraggingFrame(bounds, contents: preview)
         beginDraggingSession(with: [draggingItem], event: down, source: self)
+    }
+
+    /// A two-finger swipe sideways flicks the card away.
+    override func scrollWheel(with event: NSEvent) {
+        guard event.hasPreciseScrollingDeltas else { return }
+        if event.phase == .began { swipeDistance = 0 }
+        if abs(event.scrollingDeltaX) > abs(event.scrollingDeltaY) {
+            swipeDistance += event.scrollingDeltaX
+        }
+        if abs(swipeDistance) > 50 {
+            swipeDistance = 0
+            onSwipe?()
+        }
+        if event.phase == .ended || event.phase == .cancelled { swipeDistance = 0 }
     }
 
     override func mouseUp(with event: NSEvent) {
