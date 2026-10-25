@@ -266,7 +266,7 @@ final class EditorCanvasView: NSView, NSTextFieldDelegate {
             context.translateBy(x: canvas.minX, y: canvas.minY)
             context.scaleBy(x: scale, y: scale)
             BackdropRenderer.drawFill(document.backdrop.fill, in: CGRect(origin: .zero, size: layout.canvasSize), context: context)
-            BackdropRenderer.drawFrame(around: layout.contentRect, backdrop: document.backdrop, scale: document.scale, in: context) {
+            BackdropRenderer.drawFrame(layout: layout, backdrop: document.backdrop, scale: document.scale, in: context) {
                 context.saveGState()
                 // Undo the canvas transform so the screenshot draws exactly as without a background.
                 context.scaleBy(x: 1 / scale, y: 1 / scale)

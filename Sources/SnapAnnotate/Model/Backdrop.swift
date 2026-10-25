@@ -1,7 +1,8 @@
 import CoreGraphics
 
-/// A background behind the screenshot for sharing: fill, padding, rounded corners, shadow and
-/// the canvas's aspect ratio. Lengths are in points; the renderer multiplies by the capture scale.
+/// A background behind the screenshot for sharing: fill, padding, rounded corners, shadow, an
+/// optional window or browser frame and the canvas's aspect ratio. Lengths are in points; the
+/// renderer multiplies by the capture scale.
 public struct Backdrop: Equatable {
     public enum Fill: Equatable {
         case gradient(top: RGBA, bottom: RGBA)
@@ -47,6 +48,34 @@ public struct Backdrop: Equatable {
         }
     }
 
+    /// A title bar drawn above the screenshot, as if it were a Mac window.
+    public enum Frame: String, CaseIterable, Identifiable {
+        case none
+        /// Traffic lights.
+        case window
+        /// Traffic lights and an address bar.
+        case browser
+
+        public var id: String { rawValue }
+
+        public var title: String {
+            switch self {
+            case .none: "None"
+            case .window: "Window"
+            case .browser: "Browser"
+            }
+        }
+
+        /// The bar's height in points.
+        var barHeight: CGFloat {
+            switch self {
+            case .none: 0
+            case .window: 28
+            case .browser: 40
+            }
+        }
+    }
+
     public var isEnabled: Bool
     public var fill: Fill
     public var padding: CGFloat
@@ -54,15 +83,20 @@ public struct Backdrop: Equatable {
     /// 0 (none) to 1 (strong).
     public var shadow: CGFloat
     public var aspect: Aspect
+    public var frame: Frame
+    public var darkFrame: Bool
 
     public init(isEnabled: Bool = false, fill: Fill = Backdrop.gradients[0], padding: CGFloat = 64,
-                cornerRadius: CGFloat = 12, shadow: CGFloat = 0.5, aspect: Aspect = .automatic) {
+                cornerRadius: CGFloat = 12, shadow: CGFloat = 0.5, aspect: Aspect = .automatic,
+                frame: Frame = .none, darkFrame: Bool = false) {
         self.isEnabled = isEnabled
         self.fill = fill
         self.padding = padding
         self.cornerRadius = cornerRadius
         self.shadow = shadow
         self.aspect = aspect
+        self.frame = frame
+        self.darkFrame = darkFrame
     }
 
     /// The last settings used, so a new editor starts where the previous one left off.

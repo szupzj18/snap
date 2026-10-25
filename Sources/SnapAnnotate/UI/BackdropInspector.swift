@@ -36,6 +36,20 @@ struct BackdropInspector: View {
                     ForEach(Backdrop.Aspect.allCases) { Text($0.title).tag($0) }
                 }
                 .pickerStyle(.segmented)
+                HStack {
+                    Text("Frame").fixedSize()
+                    Picker("Frame", selection: $document.backdrop.frame) {
+                        ForEach(Backdrop.Frame.allCases) { Text($0.title).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    Toggle(isOn: $document.backdrop.darkFrame) {
+                        Image(systemName: "moon.fill")
+                    }
+                    .toggleStyle(.button)
+                    .disabled(document.backdrop.frame == .none)
+                    .help("Dark frame")
+                }
             }
             .disabled(!document.backdrop.isEnabled)
         }

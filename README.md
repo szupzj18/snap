@@ -38,7 +38,7 @@ Retina scaling.
   The select tool moves, restyles and deletes what you've drawn; double-click a text to change
   it. Crop with C. **Background** puts the result on a gradient, solid color or your desktop
   picture, with padding, rounded corners, shadow and an optional 1:1, 4:3 or 16:9 canvas, ready
-  to share. Hold Shift for squares and 45° arrows, Option to draw from the center.
+  to share; a light or dark Mac window or browser frame can wrap the screenshot. Hold Shift for squares and 45° arrows, Option to draw from the center.
 - **Existing images**: Open Image… annotates any image file; Annotate / Pin Clipboard Image work
   on whatever image you copied (image data or a copied file).
 - **Pins**: keep a capture floating above all windows. Drag to move, scroll or pinch to zoom,

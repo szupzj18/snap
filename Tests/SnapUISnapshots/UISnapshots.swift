@@ -104,6 +104,31 @@ final class UISnapshots: SnapshotTestCase {
         try await Snapshot.capture(inspector, name: "backdrop-inspector", includeTitleBar: false)
     }
 
+    /// The editor with a browser frame, the popover with a frame picked, and what Copy / Save
+    /// produce for each frame in light and dark.
+    @MainActor
+    func testEditorBackdropFrames() async throws {
+        let controller = editor()
+        controller.annotationDocument.add(Annotation(shape: .arrow(from: CGPoint(x: 160, y: 1100), to: CGPoint(x: 900, y: 520)),
+                                                     color: .red, lineWidth: 10))
+        controller.annotationDocument.backdrop = Backdrop(isEnabled: true, fill: Backdrop.gradients[1], padding: 64,
+                                                          cornerRadius: 12, shadow: 0.6, frame: .browser)
+        try await Snapshot.capture(controller.window!, name: "editor-frame")
+
+        let inspector = Snapshot.window(BackdropInspector(document: controller.annotationDocument))
+        try await Snapshot.capture(inspector, name: "backdrop-inspector-frame", includeTitleBar: false)
+
+        for frame in [Backdrop.Frame.window, .browser] {
+            for dark in [false, true] {
+                controller.annotationDocument.backdrop.frame = frame
+                controller.annotationDocument.backdrop.darkFrame = dark
+                controller.annotationDocument.backdrop.fill = dark ? Backdrop.gradients[7] : Backdrop.gradients[0]
+                let image = try XCTUnwrap(controller.exportedImage())
+                try Snapshot.write(image, name: "frame-\(frame.rawValue)-\(dark ? "dark" : "light")")
+            }
+        }
+    }
+
     /// The trim window with AVKit's trim bar open over a made-up recording.
     @MainActor
     func testTrim() async throws {
