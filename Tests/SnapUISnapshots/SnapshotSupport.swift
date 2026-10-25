@@ -69,6 +69,12 @@ enum Snapshot {
             image = try XCTUnwrap(image.cropping(to: content))
         }
 
+        return try write(image, name: name)
+    }
+
+    /// Writes `<name>.png` as is, for images rendered without a window.
+    @discardableResult
+    static func write(_ image: CGImage, name: String) throws -> URL {
         try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
         let url = outputDirectory.appendingPathComponent("\(name).png")
         let data = try XCTUnwrap(NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:]))

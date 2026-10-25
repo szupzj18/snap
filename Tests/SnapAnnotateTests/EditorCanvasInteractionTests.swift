@@ -138,6 +138,17 @@ final class EditorCanvasInteractionTests: XCTestCase {
         XCTAssertEqual(document.annotations.last?.shape, .rectangle(CGRect(x: 120, y: 20, width: 50, height: 40)))
     }
 
+    func testDrawingLandsRightWithAWindowFrame() {
+        // 200×150 px at 1x, 20 pt padding and a 28 pt bar: a 240×218 canvas centered in 400×300,
+        // so the screenshot's top-left is at (100, 89), 14 pt lower than `mouse` assumes.
+        document.backdrop = Backdrop(isEnabled: true, fill: .solid(.white), padding: 20, cornerRadius: 0, shadow: 0, frame: .window)
+        state.tool = .rectangle
+        canvas.mouseDown(with: mouse(.leftMouseDown, 20, 34))
+        canvas.mouseDragged(with: mouse(.leftMouseDragged, 70, 74))
+        canvas.mouseUp(with: mouse(.leftMouseUp, 70, 74))
+        XCTAssertEqual(document.annotations.last?.shape, .rectangle(CGRect(x: 20, y: 20, width: 50, height: 40)))
+    }
+
     func testPenDrawsAFreehandStroke() {
         state.tool = .pen
         canvas.mouseDown(with: mouse(.leftMouseDown, 10, 100))

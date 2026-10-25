@@ -73,7 +73,8 @@ public final class EditorWindowController: NSWindowController, NSWindowDelegate 
 
     // MARK: Export
 
-    private func exportedImage() -> CGImage? {
+    /// What Copy and Save produce.
+    func exportedImage() -> CGImage? {
         guard let content = renderer.export(annotationDocument.annotations, crop: annotationDocument.crop) else { return nil }
         let backdrop = annotationDocument.backdrop
         return backdrop.isEnabled ? BackdropRenderer.compose(content, backdrop: backdrop, scale: capture.scale) : content
