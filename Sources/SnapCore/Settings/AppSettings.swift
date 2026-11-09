@@ -32,6 +32,7 @@ public final class AppSettings: ObservableObject {
         static let afterCapture = "afterCapture"
         static let windowShadow = "windowShadow"
         static let hideDesktopIcons = "hideDesktopIcons"
+        static let captureDelay = "captureDelay"
         static let quickAccessAutoClose = "quickAccessAutoClose"
         static let historyEnabled = "historyEnabled"
         static let historyLimit = "historyLimit"
@@ -66,6 +67,13 @@ public final class AppSettings: ObservableObject {
     @Published public var hideDesktopIcons: Bool {
         didSet { defaults.set(hideDesktopIcons, forKey: Key.hideDesktopIcons) }
     }
+
+    /// Seconds to count down for Capture After Delay; the last choice is kept.
+    @Published public var captureDelay: Int {
+        didSet { defaults.set(captureDelay, forKey: Key.captureDelay) }
+    }
+
+    public static let captureDelayChoices = [3, 5, 10]
 
     /// Seconds before an untouched Quick Access preview closes itself; 0 keeps it open.
     @Published public var quickAccessAutoClose: TimeInterval {
@@ -123,6 +131,7 @@ public final class AppSettings: ObservableObject {
             ?? Self.defaultAfterCapture
         windowShadow = defaults.object(forKey: Key.windowShadow) as? Bool ?? true
         hideDesktopIcons = defaults.bool(forKey: Key.hideDesktopIcons)
+        captureDelay = (defaults.object(forKey: Key.captureDelay) as? Int).flatMap { Self.captureDelayChoices.contains($0) ? $0 : nil } ?? 5
         quickAccessAutoClose = defaults.object(forKey: Key.quickAccessAutoClose) as? TimeInterval ?? 5
         historyEnabled = defaults.object(forKey: Key.historyEnabled) as? Bool ?? true
         historyLimit = defaults.object(forKey: Key.historyLimit) as? Int ?? 50

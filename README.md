@@ -13,6 +13,8 @@ Retina scaling.
 ## Features
 
 - **Capture area, window or fullscreen** from the menu bar or global shortcuts.
+  **Capture After Delay** in the menu bar counts down 3, 5 or 10 seconds first, to catch open
+  menus and hover states.
 - **Area selection** on a frozen image of every display: dimmed overlay, crosshair guides,
   a magnifier with pixel coordinates, live pixel size. While dragging, Shift makes a square,
   Option grows from the center and holding Space moves the selection. Space before dragging

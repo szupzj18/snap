@@ -24,7 +24,16 @@ final class CaptureCoordinator {
         self.actions = actions
     }
 
-    func start(_ mode: CaptureMode) {
+    /// Modes that make sense after a delay: the ones that freeze the screen or grab it at once.
+    static let delayableModes: [CaptureMode] = [.area, .window, .fullscreen]
+
+    /// Whether a delayed capture is counting down (it can be cancelled from the menu bar).
+    var isCountingDown: Bool { countdown != nil }
+    private var countdown: Task<Void, Never>?
+
+    /// With a `delay`, counts down first so the user can open a menu or hover something; the
+    /// screen is frozen only when the countdown ends.
+    func start(_ mode: CaptureMode, delay: Int = 0) {
         // These run their own sessions, and the same shortcut finishes them.
         if mode == .recording {
             recording?.toggle()
@@ -40,21 +49,44 @@ final class CaptureCoordinator {
             return
         }
         isCapturing = true
-        Task {
-            defer { isCapturing = false }
-            do {
-                guard let capture = try await capture(mode) else { return }
-                if mode == .text {
-                    if settings.playSound { CaptureSound.play() }
-                    await actions.copyText(from: capture)
-                } else {
-                    router.handle(capture)
-                }
-            } catch CaptureError.permissionDenied {
-                onboarding.show()
-            } catch {
-                ErrorPresenter.present(error)
+        guard delay > 0 else {
+            Task { await run(mode) }
+            return
+        }
+        countdown = Task {
+            for remaining in stride(from: delay, to: 0, by: -1) {
+                Toast.show("Capturing \(mode.title.lowercased()) in \(remaining)…", systemImage: "timer", on: NSScreen.underMouse)
+                try? await Task.sleep(for: .seconds(1))
+                if Task.isCancelled { break }
             }
+            Toast.hide()
+            countdown = nil
+            if Task.isCancelled {
+                isCapturing = false
+            } else {
+                await run(mode)
+            }
+        }
+    }
+
+    func cancelCountdown() {
+        countdown?.cancel()
+    }
+
+    private func run(_ mode: CaptureMode) async {
+        defer { isCapturing = false }
+        do {
+            guard let capture = try await capture(mode) else { return }
+            if mode == .text {
+                if settings.playSound { CaptureSound.play() }
+                await actions.copyText(from: capture)
+            } else {
+                router.handle(capture)
+            }
+        } catch CaptureError.permissionDenied {
+            onboarding.show()
+        } catch {
+            ErrorPresenter.present(error)
         }
     }
 

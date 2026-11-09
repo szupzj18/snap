@@ -23,6 +23,7 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertEqual(settings.afterCapture, AppSettings.defaultAfterCapture)
         XCTAssertTrue(settings.windowShadow)
         XCTAssertFalse(settings.hideDesktopIcons)
+        XCTAssertEqual(settings.captureDelay, 5)
         XCTAssertEqual(settings.quickAccessAutoClose, 5)
         XCTAssertTrue(settings.historyEnabled)
         XCTAssertEqual(settings.historyLimit, 50)
@@ -72,5 +73,12 @@ final class AppSettingsTests: XCTestCase {
         let settings = AppSettings(defaults: defaults)
         settings.afterCapture = []
         XCTAssertEqual(AppSettings(defaults: defaults).afterCapture, [])
+    }
+
+    func testCaptureDelayIsKeptAndUnknownValuesFallBack() {
+        AppSettings(defaults: defaults).captureDelay = 10
+        XCTAssertEqual(AppSettings(defaults: defaults).captureDelay, 10)
+        defaults.set(7, forKey: "captureDelay")
+        XCTAssertEqual(AppSettings(defaults: defaults).captureDelay, 5)
     }
 }

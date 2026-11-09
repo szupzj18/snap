@@ -52,7 +52,7 @@ enum Toast {
         DispatchQueue.main.asyncAfter(deadline: .now() + (action == nil ? 1.6 : 4), execute: work)
     }
 
-    private static func hide() {
+    static func hide() {
         hideWork?.cancel()
         hideWork = nil
         panel?.orderOut(nil)

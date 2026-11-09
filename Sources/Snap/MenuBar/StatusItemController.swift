@@ -13,6 +13,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private let updates: UpdateChecker
     private let imports: ImageImportController
     private let pins: PinController
+    private var delayItems: [(seconds: Int, item: NSMenuItem)] = []
+    private var cancelDelayItem: NSMenuItem?
     private var unlockPinsItem: NSMenuItem?
     private var closePinsItem: NSMenuItem?
     private lazy var mainMenu = makeMenu()
@@ -118,6 +120,10 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             item.setShortcut(for: mode.shortcutName)
             menu.addItem(item)
         }
+        menu.addItem(makeDelayItem())
+        let cancelDelay = ClosureMenuItem(title: "Cancel Delayed Capture") { [weak self] in self?.coordinator.cancelCountdown() }
+        cancelDelayItem = cancelDelay
+        menu.addItem(cancelDelay)
         menu.addItem(.separator())
         menu.addItem(ClosureMenuItem(title: "Open Image…") { [weak self] in self?.imports.openFile() })
         let annotate = ClosureMenuItem(title: "Annotate Clipboard Image") { [weak self] in self?.imports.annotateClipboard() }
@@ -148,7 +154,30 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         return menu
     }
 
+    /// "Capture After Delay" › the delay (remembered), then what to capture.
+    private func makeDelayItem() -> NSMenuItem {
+        let submenu = NSMenu()
+        submenu.autoenablesItems = false
+        delayItems = AppSettings.captureDelayChoices.map { seconds in
+            let item = ClosureMenuItem(title: "\(seconds) Seconds") { AppSettings.shared.captureDelay = seconds }
+            submenu.addItem(item)
+            return (seconds, item)
+        }
+        submenu.addItem(.separator())
+        for mode in CaptureCoordinator.delayableModes {
+            submenu.addItem(ClosureMenuItem(title: mode.title) { [weak self] in
+                self?.startAfterMenuCloses(mode, delay: AppSettings.shared.captureDelay)
+            })
+        }
+        let item = NSMenuItem(title: "Capture After Delay", action: nil, keyEquivalent: "")
+        item.submenu = submenu
+        return item
+    }
+
     func menuNeedsUpdate(_ menu: NSMenu) {
+        let delay = AppSettings.shared.captureDelay
+        delayItems.forEach { $0.item.state = $0.seconds == delay ? .on : .off }
+        cancelDelayItem?.isHidden = !coordinator.isCountingDown
         let hasImage = imports.clipboardHasImage
         clipboardItems.forEach { $0.isEnabled = hasImage }
         unlockPinsItem?.isEnabled = pins.hasLockedPins
@@ -184,9 +213,13 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
     @objc private func captureFromMenu(_ sender: NSMenuItem) {
         guard let raw = sender.representedObject as? String, let mode = CaptureMode(rawValue: raw) else { return }
-        // Let the menu finish fading out so it doesn't end up in the screenshot.
+        startAfterMenuCloses(mode)
+    }
+
+    /// Lets the menu finish fading out so it doesn't end up in the screenshot.
+    private func startAfterMenuCloses(_ mode: CaptureMode, delay: Int = 0) {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [coordinator] in
-            coordinator.start(mode)
+            coordinator.start(mode, delay: delay)
         }
     }
 }
