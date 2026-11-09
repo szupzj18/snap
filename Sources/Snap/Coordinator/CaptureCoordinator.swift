@@ -6,7 +6,7 @@ import SnapCore
 /// grabs the pixels and hands the result to the router.
 @MainActor
 final class CaptureCoordinator {
-    private let service = ScreenshotService()
+    private let service: ScreenshotService
     private let settings: AppSettings
     private let onboarding: PermissionOnboardingController
     private let router: PostCaptureRouter
@@ -16,8 +16,9 @@ final class CaptureCoordinator {
     var scrolling: ScrollingCaptureController?
     private var isCapturing = false
 
-    init(settings: AppSettings, onboarding: PermissionOnboardingController, router: PostCaptureRouter, actions: CaptureActions) {
+    init(settings: AppSettings, service: ScreenshotService, onboarding: PermissionOnboardingController, router: PostCaptureRouter, actions: CaptureActions) {
         self.settings = settings
+        self.service = service
         self.onboarding = onboarding
         self.router = router
         self.actions = actions

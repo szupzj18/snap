@@ -142,6 +142,10 @@ private struct CaptureSettingsView: View {
                 Toggle("Record the microphone", isOn: $settings.recordMicrophone)
             }
 
+            Section("Screenshots") {
+                Toggle("Hide desktop icons and widgets", isOn: $settings.hideDesktopIcons)
+            }
+
             Section("Window capture") {
                 Toggle("Add shadow", isOn: $settings.windowShadow)
             }

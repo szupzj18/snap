@@ -17,11 +17,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var router = PostCaptureRouter(
         settings: settings, actions: actions, quickAccess: quickAccess, pins: pins, editors: editors, history: history
     )
-    private lazy var coordinator = CaptureCoordinator(settings: settings, onboarding: onboarding, router: router, actions: actions)
-    private lazy var recording = RecordingController(
-        settings: settings, service: ScreenshotService(), onboarding: onboarding, router: router
+    /// Shared by every capture path, so the desktop-icons setting applies to all of them.
+    private lazy var service = ScreenshotService(hidesDesktopIcons: { [settings] in settings.hideDesktopIcons })
+    private lazy var coordinator = CaptureCoordinator(
+        settings: settings, service: service, onboarding: onboarding, router: router, actions: actions
     )
-    private lazy var scrolling = ScrollingCaptureController(service: ScreenshotService(), onboarding: onboarding, router: router)
+    private lazy var recording = RecordingController(
+        settings: settings, service: service, onboarding: onboarding, router: router
+    )
+    private lazy var scrolling = ScrollingCaptureController(service: service, onboarding: onboarding, router: router)
     private lazy var updates = UpdateChecker(settings: settings)
     private lazy var imports = ImageImportController(editors: editors, pins: pins)
     private var statusItemController: StatusItemController?

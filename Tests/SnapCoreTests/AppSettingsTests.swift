@@ -22,6 +22,7 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertEqual(settings.filenameTemplate, FilenameFormatter.defaultTemplate)
         XCTAssertEqual(settings.afterCapture, AppSettings.defaultAfterCapture)
         XCTAssertTrue(settings.windowShadow)
+        XCTAssertFalse(settings.hideDesktopIcons)
         XCTAssertEqual(settings.quickAccessAutoClose, 5)
         XCTAssertTrue(settings.historyEnabled)
         XCTAssertEqual(settings.historyLimit, 50)
@@ -39,6 +40,7 @@ final class AppSettingsTests: XCTestCase {
         settings.filenameTemplate = "{mode} {time}"
         settings.afterCapture = [.copyToClipboard]
         settings.windowShadow = false
+        settings.hideDesktopIcons = true
         settings.quickAccessAutoClose = 0
         settings.historyEnabled = false
         settings.historyLimit = 200
@@ -54,6 +56,7 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertEqual(reloaded.filenameTemplate, "{mode} {time}")
         XCTAssertEqual(reloaded.afterCapture, [.copyToClipboard])
         XCTAssertFalse(reloaded.windowShadow)
+        XCTAssertTrue(reloaded.hideDesktopIcons)
         XCTAssertEqual(reloaded.quickAccessAutoClose, 0)
         XCTAssertFalse(reloaded.historyEnabled)
         XCTAssertEqual(reloaded.historyLimit, 200)

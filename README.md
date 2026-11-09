@@ -46,7 +46,8 @@ Retina scaling.
   ⌥-scroll to change opacity, right-click for more.
 - **History**: the last 50 captures (configurable) are kept, so a closed preview is never lost.
   Open History… from the menu bar to copy, annotate, pin, drag out or reveal any of them.
-- **Settings**: save folder, file name template, after-capture actions, shortcuts.
+- **Settings**: save folder, file name template, after-capture actions, shortcuts, and an
+  option to leave desktop icons and widgets out of screenshots and recordings.
 
 ## Install
 

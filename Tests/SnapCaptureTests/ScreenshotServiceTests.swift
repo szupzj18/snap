@@ -20,3 +20,24 @@ final class ScreenshotServiceTests: XCTestCase {
         }
     }
 }
+
+final class DesktopClutterTests: XCTestCase {
+    func testFinderDesktopIconsAreClutter() {
+        let iconLevel = Int(CGWindowLevelForKey(.desktopIconWindow))
+        XCTAssertTrue(ScreenshotService.isDesktopClutter(layer: iconLevel, bundleIdentifier: "com.apple.finder"))
+    }
+
+    func testDesktopWidgetsAreClutter() {
+        let desktopLevel = Int(CGWindowLevelForKey(.desktopWindow))
+        XCTAssertTrue(ScreenshotService.isDesktopClutter(layer: desktopLevel + 1, bundleIdentifier: "com.apple.notificationcenterui"))
+    }
+
+    func testWallpaperAndNormalWindowsStay() {
+        let desktopLevel = Int(CGWindowLevelForKey(.desktopWindow))
+        let normal = Int(CGWindowLevelForKey(.normalWindow))
+        XCTAssertFalse(ScreenshotService.isDesktopClutter(layer: desktopLevel - 1, bundleIdentifier: "com.apple.dock"))
+        XCTAssertFalse(ScreenshotService.isDesktopClutter(layer: normal, bundleIdentifier: "com.apple.finder"))
+        // Notification banners float above everything; only the widgets below normal windows go.
+        XCTAssertFalse(ScreenshotService.isDesktopClutter(layer: normal + 100, bundleIdentifier: "com.apple.notificationcenterui"))
+    }
+}

@@ -31,6 +31,7 @@ public final class AppSettings: ObservableObject {
         static let filenameTemplate = "filenameTemplate"
         static let afterCapture = "afterCapture"
         static let windowShadow = "windowShadow"
+        static let hideDesktopIcons = "hideDesktopIcons"
         static let quickAccessAutoClose = "quickAccessAutoClose"
         static let historyEnabled = "historyEnabled"
         static let historyLimit = "historyLimit"
@@ -59,6 +60,11 @@ public final class AppSettings: ObservableObject {
     /// Whether window captures get a drop shadow.
     @Published public var windowShadow: Bool {
         didSet { defaults.set(windowShadow, forKey: Key.windowShadow) }
+    }
+
+    /// Leave Finder's desktop icons and desktop widgets out of screenshots and recordings.
+    @Published public var hideDesktopIcons: Bool {
+        didSet { defaults.set(hideDesktopIcons, forKey: Key.hideDesktopIcons) }
     }
 
     /// Seconds before an untouched Quick Access preview closes itself; 0 keeps it open.
@@ -116,6 +122,7 @@ public final class AppSettings: ObservableObject {
             .map { Set($0.compactMap(AfterCaptureAction.init(rawValue:))) }
             ?? Self.defaultAfterCapture
         windowShadow = defaults.object(forKey: Key.windowShadow) as? Bool ?? true
+        hideDesktopIcons = defaults.bool(forKey: Key.hideDesktopIcons)
         quickAccessAutoClose = defaults.object(forKey: Key.quickAccessAutoClose) as? TimeInterval ?? 5
         historyEnabled = defaults.object(forKey: Key.historyEnabled) as? Bool ?? true
         historyLimit = defaults.object(forKey: Key.historyLimit) as? Int ?? 50

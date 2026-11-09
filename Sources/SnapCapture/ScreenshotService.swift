@@ -27,15 +27,18 @@ public struct DisplaySnapshot {
 /// Takes still screenshots with ScreenCaptureKit.
 public final class ScreenshotService {
     let ownBundleIdentifier: String?
+    /// Asked before every capture, so a settings change applies to the next one.
+    let hidesDesktopIcons: () -> Bool
 
-    public init(ownBundleIdentifier: String? = Bundle.main.bundleIdentifier) {
+    public init(ownBundleIdentifier: String? = Bundle.main.bundleIdentifier, hidesDesktopIcons: @escaping () -> Bool = { false }) {
         self.ownBundleIdentifier = ownBundleIdentifier
+        self.hidesDesktopIcons = hidesDesktopIcons
     }
 
     /// Captures every connected display in parallel.
     public func captureAllDisplays() async throws -> [DisplaySnapshot] {
         let content = try await shareableContent()
-        let excluded = ownWindows(in: content)
+        let excluded = excludedWindows(in: content)
         return try await withThrowingTaskGroup(of: DisplaySnapshot.self) { group in
             for display in content.displays {
                 group.addTask { try await self.capture(display, excluding: excluded) }
@@ -49,7 +52,7 @@ public final class ScreenshotService {
         guard let display = content.displays.first(where: { $0.displayID == displayID }) else {
             throw CaptureError.displayNotFound
         }
-        return try await capture(display, excluding: ownWindows(in: content))
+        return try await capture(display, excluding: excludedWindows(in: content))
     }
 
     private func capture(_ display: SCDisplay, excluding excluded: [SCWindow]) async throws -> DisplaySnapshot {
@@ -73,7 +76,7 @@ public final class ScreenshotService {
         guard let display = content.displays.first(where: { $0.displayID == displayID }) else {
             throw CaptureError.displayNotFound
         }
-        let filter = SCContentFilter(display: display, excludingWindows: ownWindows(in: content))
+        let filter = SCContentFilter(display: display, excludingWindows: excludedWindows(in: content))
         let local = rect.offsetBy(dx: -display.frame.minX, dy: -display.frame.minY)
             .intersection(CGRect(origin: .zero, size: display.frame.size))
         guard local.width >= 2, local.height >= 2 else { throw CaptureError.displayNotFound }
@@ -84,6 +87,24 @@ public final class ScreenshotService {
         try await mapErrors {
             try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
         }
+    }
+
+    /// Windows left out of display captures: always our own, plus the desktop icons when asked.
+    func excludedWindows(in content: SCShareableContent) -> [SCWindow] {
+        var excluded = ownWindows(in: content)
+        if hidesDesktopIcons() {
+            excluded += content.windows.filter {
+                Self.isDesktopClutter(layer: $0.windowLayer, bundleIdentifier: $0.owningApplication?.bundleIdentifier)
+            }
+        }
+        return excluded
+    }
+
+    /// Finder's desktop icons sit at the desktop-icon level; desktop widgets (macOS 14+) belong to
+    /// Notification Center below the normal level. The wallpaper (Dock, desktop level) stays.
+    static func isDesktopClutter(layer: Int, bundleIdentifier: String?) -> Bool {
+        if layer == Int(CGWindowLevelForKey(.desktopIconWindow)) { return true }
+        return bundleIdentifier == "com.apple.notificationcenterui" && layer < Int(CGWindowLevelForKey(.normalWindow))
     }
 
     /// Our own windows (overlays, previews, pins) never belong in a screenshot.
