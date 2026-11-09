@@ -38,19 +38,43 @@ final class CaptureActions {
         }
     }
 
-    /// Recognizes the text in the capture and puts it on the clipboard, with a toast either way.
+    /// Recognizes the capture's text and QR codes and puts the likelier one on the clipboard
+    /// (a QR code wins), with a toast either way that offers the other choice when there is one.
     func copyText(from capture: Capture) async {
         do {
-            let text = try await TextRecognizer.recognize(in: capture.image)
-            if text.isEmpty {
-                Toast.show("No text found", systemImage: "text.viewfinder")
-            } else {
+            let content = try await TextRecognizer.recognizeContent(in: capture.image)
+            switch content.choice {
+            case .nothing:
+                Toast.show("No text or QR code found", systemImage: "text.viewfinder")
+            case let .text(text):
                 Clipboard.copy(text)
                 Toast.show("Copied \(text.count) characters", systemImage: "doc.on.clipboard")
+            case let .qrCode(payload, alsoHasText):
+                Clipboard.copy(payload)
+                Toast.show(Self.qrToast(payload), systemImage: "qrcode", action: qrFollowUp(payload, text: alsoHasText ? content.text : nil))
             }
         } catch {
             ErrorPresenter.present(error)
         }
+    }
+
+    private static func qrToast(_ payload: String) -> String {
+        let shown = payload.count > 40 ? payload.prefix(39) + "…" : Substring(payload)
+        return "Copied QR code: \(shown)"
+    }
+
+    /// Copying the text instead matters more than opening a link: the link is on the clipboard already.
+    private func qrFollowUp(_ payload: String, text: String?) -> ToastAction? {
+        if let text {
+            return ToastAction(title: "Copy Text Instead") {
+                Clipboard.copy(text)
+                Toast.show("Copied \(text.count) characters", systemImage: "doc.on.clipboard")
+            }
+        }
+        if let url = RecognizedContent.webURL(in: payload) {
+            return ToastAction(title: "Open") { NSWorkspace.shared.open(url) }
+        }
+        return nil
     }
 
     // MARK: Recordings

@@ -1,17 +1,61 @@
 import CoreGraphics
+import Foundation
 import Vision
 
-/// On-device text recognition (OCR) with the Vision framework.
+/// What OCR found in an image: its text and the payloads of any QR codes.
+public struct RecognizedContent: Equatable {
+    public var text: String
+    public var qrCodes: [String]
+
+    public init(text: String, qrCodes: [String]) {
+        self.text = text
+        self.qrCodes = qrCodes
+    }
+
+    /// What goes on the clipboard. A QR code is the more likely reason to capture an image that
+    /// has one; the text stays available as an alternative.
+    public enum Choice: Equatable {
+        case qrCode(String, alsoHasText: Bool)
+        case text(String)
+        case nothing
+    }
+
+    public var choice: Choice {
+        if !qrCodes.isEmpty {
+            return .qrCode(qrCodes.joined(separator: "\n"), alsoHasText: !text.isEmpty)
+        }
+        return text.isEmpty ? .nothing : .text(text)
+    }
+
+    /// The payload as a web link, if it is one.
+    public static func webURL(in payload: String) -> URL? {
+        guard let url = URL(string: payload.trimmingCharacters(in: .whitespacesAndNewlines)),
+              let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https", url.host != nil
+        else { return nil }
+        return url
+    }
+}
+
+/// On-device text and QR code recognition with the Vision framework.
 public enum TextRecognizer {
     /// The text in `image`, one line per recognized line, top to bottom. Empty if there is none.
     public static func recognize(in image: CGImage) async throws -> String {
+        try await recognizeContent(in: image).text
+    }
+
+    /// Text and QR codes in one pass over the image.
+    public static func recognizeContent(in image: CGImage) async throws -> RecognizedContent {
         try await Task.detached(priority: .userInitiated) {
-            let request = VNRecognizeTextRequest()
-            request.recognitionLevel = .accurate
-            request.usesLanguageCorrection = true
-            request.automaticallyDetectsLanguage = true
-            try VNImageRequestHandler(cgImage: image).perform([request])
-            return format(request.results ?? [])
+            let textRequest = VNRecognizeTextRequest()
+            textRequest.recognitionLevel = .accurate
+            textRequest.usesLanguageCorrection = true
+            textRequest.automaticallyDetectsLanguage = true
+            let qrRequest = VNDetectBarcodesRequest()
+            qrRequest.symbologies = [.qr]
+            try VNImageRequestHandler(cgImage: image).perform([textRequest, qrRequest])
+            var seen = Set<String>()
+            let qrCodes = (qrRequest.results ?? []).compactMap(\.payloadStringValue).filter { seen.insert($0).inserted }
+            return RecognizedContent(text: format(textRequest.results ?? []), qrCodes: qrCodes)
         }.value
     }
 

@@ -90,7 +90,7 @@ struct QuickAccessCardView: View {
                 if item.recording == nil {
                     OverlayIconButton(systemImage: "pencil", help: "Annotate", action: handlers.edit)
                     Spacer()
-                    OverlayIconButton(systemImage: "text.viewfinder", help: "Copy text (OCR)", action: handlers.copyText)
+                    OverlayIconButton(systemImage: "text.viewfinder", help: "Copy text or QR code", action: handlers.copyText)
                 } else {
                     // Clicking the thumbnail plays the recording.
                     OverlayIconButton(systemImage: "scissors", help: "Trim", action: handlers.trim)

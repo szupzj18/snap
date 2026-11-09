@@ -1,15 +1,28 @@
 import AppKit
 import SwiftUI
 
+/// A button on a toast, for the one thing the user may want to do next.
+struct ToastAction {
+    let title: String
+    let perform: @MainActor () -> Void
+}
+
 /// A short message near the bottom of the screen that fades by itself and never takes focus.
 @MainActor
 enum Toast {
     private static var panel: NSPanel?
     private static var hideWork: DispatchWorkItem?
 
-    static func show(_ message: String, systemImage: String, on screen: NSScreen? = NSScreen.underMouse) {
+    /// With an `action`, the toast takes clicks and stays a little longer so there's time to use it.
+    static func show(_ message: String, systemImage: String, on screen: NSScreen? = NSScreen.underMouse, action: ToastAction? = nil) {
         guard let screen else { return }
-        let host = NSHostingView(rootView: ToastView(message: message, systemImage: systemImage))
+        let button = action.map { action in
+            ToastAction(title: action.title) {
+                hide()
+                action.perform()
+            }
+        }
+        let host = NSHostingView(rootView: ToastView(message: message, systemImage: systemImage, action: button))
         let size = host.fittingSize
         let frame = CGRect(
             x: screen.visibleFrame.midX - size.width / 2,
@@ -21,6 +34,7 @@ enum Toast {
         let panel = panel ?? makePanel()
         self.panel = panel
         panel.contentView = host
+        panel.ignoresMouseEvents = action == nil
         panel.setFrame(frame, display: true)
         panel.alphaValue = 1
         panel.orderFrontRegardless()
@@ -35,7 +49,13 @@ enum Toast {
             }
         }
         hideWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.6, execute: work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + (action == nil ? 1.6 : 4), execute: work)
+    }
+
+    private static func hide() {
+        hideWork?.cancel()
+        hideWork = nil
+        panel?.orderOut(nil)
     }
 
     private static func makePanel() -> NSPanel {
@@ -55,9 +75,17 @@ enum Toast {
 private struct ToastView: View {
     let message: String
     let systemImage: String
+    let action: ToastAction?
 
     var body: some View {
-        Label(message, systemImage: systemImage)
+        HStack(spacing: 10) {
+            Label(message, systemImage: systemImage)
+            if let action {
+                Button(action.title) { action.perform() }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+            }
+        }
             .font(.system(size: 13, weight: .medium))
             .padding(.horizontal, 16)
             .padding(.vertical, 10)

@@ -21,7 +21,8 @@ Retina scaling.
   on a transparent background and adds a drop shadow (optional).
 - **Capture text (OCR)**: select an area and its text goes to the clipboard, recognized on
   your Mac with the Vision framework (English, Chinese and more; table rows keep their cells
-  tab-separated). Also available on any Quick Access preview.
+  tab-separated). QR codes are read too: their content is copied (with Open for links, or Copy
+  Text Instead when there's text as well). Also available on any Quick Access preview.
 - **Scrolling capture**: select an area, scroll through it (trackpad or wheel, at your own pace),
   click Done, and get one tall image. Fixed headers stay at the top and fixed footers appear
   once at the bottom.
