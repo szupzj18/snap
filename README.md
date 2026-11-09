@@ -19,6 +19,10 @@ Retina scaling.
   a magnifier with pixel coordinates, live pixel size. While dragging, Shift makes a square,
   Option grows from the center and holding Space moves the selection. Space before dragging
   switches to window capture; Esc or right-click cancels.
+  **Capture Previous Area** (⌥⇧1) brings back the last area, ready to adjust: drag its handles
+  or inside it, arrow keys move it (⇧ 10 pt, ⌥ resizes), click the size to type exact pixels,
+  Return or double-click captures. Turn on "Adjust the area before capturing" in Settings to get
+  the same step after every drag.
 - **Window capture**: hover to highlight, click to capture. Keeps the window's rounded corners
   on a transparent background and adds a drop shadow (optional).
 - **Capture text (OCR)**: select an area and its text goes to the clipboard, recognized on
@@ -71,6 +75,7 @@ other data sent) and offers to open the download page. Turn it off in Settings �
 | Action | Default |
 | --- | --- |
 | Capture area | ⌥⇧4 |
+| Capture previous area (adjust, then Return) | ⌥⇧1 |
 | Capture window | ⌥⇧5 |
 | Capture fullscreen (display under the pointer) | ⌥⇧3 |
 | Capture text (OCR) | ⌥⇧2 |

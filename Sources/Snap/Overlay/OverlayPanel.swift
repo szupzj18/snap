@@ -33,12 +33,13 @@ final class OverlayPresenter {
     private(set) var panels: [OverlayPanel] = []
     private var previousApp: NSRunningApplication?
 
-    func show(_ panels: [OverlayPanel]) {
+    /// `keyScreen` takes the keyboard; by default the one under the pointer.
+    func show(_ panels: [OverlayPanel], keyScreen: NSScreen? = nil) {
         self.panels = panels
         previousApp = NSWorkspace.shared.frontmostApplication
         // Being the active app lets us own the cursor.
         NSApp.activate()
-        let keyScreen = NSScreen.underMouse
+        let keyScreen = keyScreen ?? NSScreen.underMouse
         for panel in panels {
             if panel.targetScreen == keyScreen {
                 panel.makeKeyAndOrderFront(nil)

@@ -9,6 +9,7 @@ extension KeyboardShortcuts.Name {
     static let captureText = Self("captureText", default: .init(.two, modifiers: [.option, .shift]))
     static let captureScrolling = Self("captureScrolling", default: .init(.seven, modifiers: [.option, .shift]))
     static let recordScreen = Self("recordScreen", default: .init(.six, modifiers: [.option, .shift]))
+    static let capturePreviousArea = Self("capturePreviousArea", default: .init(.one, modifiers: [.option, .shift]))
 }
 
 extension CaptureMode {
@@ -31,6 +32,9 @@ enum Hotkeys {
             KeyboardShortcuts.onKeyDown(for: mode.shortcutName) { [weak coordinator] in
                 coordinator?.start(mode)
             }
+        }
+        KeyboardShortcuts.onKeyDown(for: .capturePreviousArea) { [weak coordinator] in
+            coordinator?.start(.area, previousArea: true)
         }
     }
 }

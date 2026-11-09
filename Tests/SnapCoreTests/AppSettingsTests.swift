@@ -24,6 +24,8 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertTrue(settings.windowShadow)
         XCTAssertFalse(settings.hideDesktopIcons)
         XCTAssertEqual(settings.captureDelay, 5)
+        XCTAssertFalse(settings.adjustSelectionBeforeCapture)
+        XCTAssertNil(settings.lastAreaSelection)
         XCTAssertEqual(settings.quickAccessAutoClose, 5)
         XCTAssertTrue(settings.historyEnabled)
         XCTAssertEqual(settings.historyLimit, 50)
@@ -80,5 +82,16 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertEqual(AppSettings(defaults: defaults).captureDelay, 10)
         defaults.set(7, forKey: "captureDelay")
         XCTAssertEqual(AppSettings(defaults: defaults).captureDelay, 5)
+    }
+
+    func testSelectionSettingsAreKept() {
+        let settings = AppSettings(defaults: defaults)
+        settings.adjustSelectionBeforeCapture = true
+        settings.lastAreaSelection = SavedSelection(displayID: 2, rect: CGRect(x: 10, y: 20, width: 300, height: 200))
+        let reloaded = AppSettings(defaults: defaults)
+        XCTAssertTrue(reloaded.adjustSelectionBeforeCapture)
+        XCTAssertEqual(reloaded.lastAreaSelection, SavedSelection(displayID: 2, rect: CGRect(x: 10, y: 20, width: 300, height: 200)))
+        reloaded.lastAreaSelection = nil
+        XCTAssertNil(AppSettings(defaults: defaults).lastAreaSelection)
     }
 }

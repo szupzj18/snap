@@ -144,6 +144,7 @@ private struct CaptureSettingsView: View {
 
             Section("Screenshots") {
                 Toggle("Hide desktop icons and widgets", isOn: $settings.hideDesktopIcons)
+                Toggle("Adjust the area before capturing (Return captures)", isOn: $settings.adjustSelectionBeforeCapture)
             }
 
             Section("Window capture") {
@@ -159,6 +160,7 @@ private struct ShortcutSettingsView: View {
         Form {
             Section {
                 KeyboardShortcuts.Recorder("Capture Area", name: .captureArea)
+                KeyboardShortcuts.Recorder("Capture Previous Area", name: .capturePreviousArea)
                 KeyboardShortcuts.Recorder("Capture Window", name: .captureWindow)
                 KeyboardShortcuts.Recorder("Capture Fullscreen", name: .captureFullscreen)
                 KeyboardShortcuts.Recorder("Capture Text (OCR)", name: .captureText)

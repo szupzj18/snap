@@ -61,6 +61,19 @@ final class UISnapshots: SnapshotTestCase {
         try await Snapshot.capture(window, name: "area-selection", includeTitleBar: false)
     }
 
+    /// A finished area waiting for Return: handles, size label and the hint.
+    @MainActor
+    func testAreaSelectionAdjusting() async throws {
+        let size = CGSize(width: 600, height: 400)
+        let display = DisplaySnapshot(displayID: 0, frame: CGRect(origin: .zero, size: size), scale: 2,
+                                      image: FakeContent.code(width: 1200, height: 800))
+        let view = AreaSelectionView(frame: CGRect(origin: .zero, size: size), snapshot: display)
+        let window = NSWindow(contentRect: CGRect(origin: .zero, size: size), styleMask: [.titled], backing: .buffered, defer: false)
+        window.contentView = view
+        view.adjust(CGRect(x: 90, y: 120, width: 300, height: 180))
+        try await Snapshot.capture(window, name: "area-selection-adjusting", includeTitleBar: false)
+    }
+
     /// The editor with a few annotations.
     @MainActor
     func testEditor() async throws {

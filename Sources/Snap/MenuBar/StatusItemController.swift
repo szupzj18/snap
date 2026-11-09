@@ -15,6 +15,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private let pins: PinController
     private var delayItems: [(seconds: Int, item: NSMenuItem)] = []
     private var cancelDelayItem: NSMenuItem?
+    private var previousAreaItem: NSMenuItem?
     private var unlockPinsItem: NSMenuItem?
     private var closePinsItem: NSMenuItem?
     private lazy var mainMenu = makeMenu()
@@ -120,6 +121,12 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             item.setShortcut(for: mode.shortcutName)
             menu.addItem(item)
         }
+        let previous = ClosureMenuItem(title: "Capture Previous Area") { [weak self] in
+            self?.startAfterMenuCloses(.area, previousArea: true)
+        }
+        previous.setShortcut(for: .capturePreviousArea)
+        previousAreaItem = previous
+        menu.addItem(previous)
         menu.addItem(makeDelayItem())
         let cancelDelay = ClosureMenuItem(title: "Cancel Delayed Capture") { [weak self] in self?.coordinator.cancelCountdown() }
         cancelDelayItem = cancelDelay
@@ -178,6 +185,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         let delay = AppSettings.shared.captureDelay
         delayItems.forEach { $0.item.state = $0.seconds == delay ? .on : .off }
         cancelDelayItem?.isHidden = !coordinator.isCountingDown
+        previousAreaItem?.isEnabled = AppSettings.shared.lastAreaSelection != nil
         let hasImage = imports.clipboardHasImage
         clipboardItems.forEach { $0.isEnabled = hasImage }
         unlockPinsItem?.isEnabled = pins.hasLockedPins
@@ -217,9 +225,9 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     }
 
     /// Lets the menu finish fading out so it doesn't end up in the screenshot.
-    private func startAfterMenuCloses(_ mode: CaptureMode, delay: Int = 0) {
+    private func startAfterMenuCloses(_ mode: CaptureMode, delay: Int = 0, previousArea: Bool = false) {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [coordinator] in
-            coordinator.start(mode, delay: delay)
+            coordinator.start(mode, delay: delay, previousArea: previousArea)
         }
     }
 }

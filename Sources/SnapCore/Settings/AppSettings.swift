@@ -22,6 +22,18 @@ public enum AfterCaptureAction: String, CaseIterable, Identifiable {
     }
 }
 
+/// An area the user selected, kept for Capture Previous Area.
+public struct SavedSelection: Codable, Equatable {
+    public var displayID: UInt32
+    /// Quartz global points (top-left origin), as in `Capture.sourceRect`.
+    public var rect: CGRect
+
+    public init(displayID: UInt32, rect: CGRect) {
+        self.displayID = displayID
+        self.rect = rect
+    }
+}
+
 /// User preferences, persisted in UserDefaults.
 public final class AppSettings: ObservableObject {
     public static let shared = AppSettings()
@@ -33,6 +45,8 @@ public final class AppSettings: ObservableObject {
         static let windowShadow = "windowShadow"
         static let hideDesktopIcons = "hideDesktopIcons"
         static let captureDelay = "captureDelay"
+        static let adjustSelectionBeforeCapture = "adjustSelectionBeforeCapture"
+        static let lastAreaSelection = "lastAreaSelection"
         static let quickAccessAutoClose = "quickAccessAutoClose"
         static let historyEnabled = "historyEnabled"
         static let historyLimit = "historyLimit"
@@ -74,6 +88,16 @@ public final class AppSettings: ObservableObject {
     }
 
     public static let captureDelayChoices = [3, 5, 10]
+
+    /// After dragging out an area, wait for Return so it can be adjusted first.
+    @Published public var adjustSelectionBeforeCapture: Bool {
+        didSet { defaults.set(adjustSelectionBeforeCapture, forKey: Key.adjustSelectionBeforeCapture) }
+    }
+
+    /// The last area captured, for Capture Previous Area.
+    @Published public var lastAreaSelection: SavedSelection? {
+        didSet { defaults.set(lastAreaSelection.flatMap { try? JSONEncoder().encode($0) }, forKey: Key.lastAreaSelection) }
+    }
 
     /// Seconds before an untouched Quick Access preview closes itself; 0 keeps it open.
     @Published public var quickAccessAutoClose: TimeInterval {
@@ -131,6 +155,8 @@ public final class AppSettings: ObservableObject {
             ?? Self.defaultAfterCapture
         windowShadow = defaults.object(forKey: Key.windowShadow) as? Bool ?? true
         hideDesktopIcons = defaults.bool(forKey: Key.hideDesktopIcons)
+        adjustSelectionBeforeCapture = defaults.bool(forKey: Key.adjustSelectionBeforeCapture)
+        lastAreaSelection = defaults.data(forKey: Key.lastAreaSelection).flatMap { try? JSONDecoder().decode(SavedSelection.self, from: $0) }
         captureDelay = (defaults.object(forKey: Key.captureDelay) as? Int).flatMap { Self.captureDelayChoices.contains($0) ? $0 : nil } ?? 5
         quickAccessAutoClose = defaults.object(forKey: Key.quickAccessAutoClose) as? TimeInterval ?? 5
         historyEnabled = defaults.object(forKey: Key.historyEnabled) as? Bool ?? true

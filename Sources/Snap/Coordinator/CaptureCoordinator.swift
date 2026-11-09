@@ -33,7 +33,8 @@ final class CaptureCoordinator {
 
     /// With a `delay`, counts down first so the user can open a menu or hover something; the
     /// screen is frozen only when the countdown ends.
-    func start(_ mode: CaptureMode, delay: Int = 0) {
+    /// `previousArea` starts an area capture from the last area selected, ready to adjust.
+    func start(_ mode: CaptureMode, delay: Int = 0, previousArea: Bool = false) {
         // These run their own sessions, and the same shortcut finishes them.
         if mode == .recording {
             recording?.toggle()
@@ -48,9 +49,13 @@ final class CaptureCoordinator {
             onboarding.show()
             return
         }
+        if previousArea, settings.lastAreaSelection == nil {
+            Toast.show("No area captured yet", systemImage: "rectangle.dashed")
+            return
+        }
         isCapturing = true
         guard delay > 0 else {
-            Task { await run(mode) }
+            Task { await run(mode, previousArea: previousArea) }
             return
         }
         countdown = Task {
@@ -64,7 +69,7 @@ final class CaptureCoordinator {
             if Task.isCancelled {
                 isCapturing = false
             } else {
-                await run(mode)
+                await run(mode, previousArea: previousArea)
             }
         }
     }
@@ -73,10 +78,13 @@ final class CaptureCoordinator {
         countdown?.cancel()
     }
 
-    private func run(_ mode: CaptureMode) async {
+    private func run(_ mode: CaptureMode, previousArea: Bool = false) async {
         defer { isCapturing = false }
         do {
-            guard let capture = try await capture(mode) else { return }
+            guard let capture = try await capture(mode, previousArea: previousArea) else { return }
+            if capture.mode == .area || capture.mode == .text, let displayID = capture.displayID {
+                settings.lastAreaSelection = SavedSelection(displayID: displayID, rect: capture.sourceRect)
+            }
             if mode == .text {
                 if settings.playSound { CaptureSound.play() }
                 await actions.copyText(from: capture)
@@ -91,14 +99,18 @@ final class CaptureCoordinator {
     }
 
     /// Returns nil when the user cancels.
-    private func capture(_ mode: CaptureMode) async throws -> Capture? {
+    private func capture(_ mode: CaptureMode, previousArea: Bool) async throws -> Capture? {
         switch mode {
         case .fullscreen:
             return try await captureFullscreen()
         case .area, .text:
             // Freeze first, then select: what the user sees is exactly what gets cropped.
             let snapshots = try await service.captureAllDisplays()
-            let result = await AreaSelectionSession(mode: mode, allowsWindowSwitch: mode == .area).run(snapshots: snapshots)
+            let initial = previousArea ? previousSelection(in: snapshots) : nil
+            let session = AreaSelectionSession(
+                mode: mode, allowsWindowSwitch: mode == .area, adjustsBeforeCapture: settings.adjustSelectionBeforeCapture
+            )
+            let result = await session.run(snapshots: snapshots, initial: initial)
             if case .switchToWindow = result {
                 return try await captureWindow()
             }
@@ -108,6 +120,15 @@ final class CaptureCoordinator {
         case .recording, .scrolling:
             return nil
         }
+    }
+
+    /// The last area, on its display, in that display's view coordinates. Nil if the display is gone.
+    private func previousSelection(in snapshots: [DisplaySnapshot]) -> (displayID: CGDirectDisplayID, rect: CGRect)? {
+        guard let saved = settings.lastAreaSelection,
+              let snapshot = snapshots.first(where: { $0.displayID == saved.displayID }),
+              let rect = SelectionGeometry.viewRect(fromGlobal: saved.rect, displayFrame: snapshot.frame)
+        else { return nil }
+        return (saved.displayID, rect)
     }
 
     private func captureWindow() async throws -> Capture? {
