@@ -32,7 +32,8 @@ Retina scaling.
   From its Quick Access preview, trim a recording (QuickTime-style trim bar, no re-encoding) or
   turn it into a looping GIF.
 - **Quick Access preview** in the bottom-right corner after each capture: drag it into any app
-  as a file, copy, save, share, annotate, pin or close. Closes itself after a few seconds unless hovered.
+  as a file, copy, save, share, annotate, pin or close. Copy also removes the file it auto-saved
+  (the capture stays in History). Closes itself after a few seconds unless hovered.
 - **Annotation editor**: arrow, rectangle, ellipse, line, pen, text, highlight, pixelate, blur,
   spotlight (dims everything else) and numbered counters, with colors, three sizes, undo/redo, copy and PNG export at full resolution.
   The select tool moves, restyles and deletes what you've drawn; double-click a text to change

@@ -24,6 +24,20 @@ final class CaptureActions {
         try Clipboard.copy(capture.image, scale: capture.scale)
     }
 
+    /// Copies the capture and, once the clipboard is confirmed to hold it, deletes the file that
+    /// was saved for it (the history keeps its own copy). Returns whether the file was deleted.
+    func copyInsteadOfSaving(_ capture: Capture, savedURL: URL) throws -> Bool {
+        let png = try Clipboard.copy(capture.image, scale: capture.scale)
+        guard Clipboard.holdsImage(png: png) else { return false }
+        do {
+            try FileManager.default.removeItem(at: savedURL)
+            return true
+        } catch {
+            NSLog("Snap: couldn't delete \(savedURL.path) after copying: \(error)")
+            return false
+        }
+    }
+
     /// Recognizes the text in the capture and puts it on the clipboard, with a toast either way.
     func copyText(from capture: Capture) async {
         do {

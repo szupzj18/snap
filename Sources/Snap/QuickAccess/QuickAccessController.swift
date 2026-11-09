@@ -77,7 +77,14 @@ final class QuickAccessController {
             copy: { [weak self, weak item] in
                 guard let self, let item else { return }
                 self.perform {
-                    try self.actions.copy(item.capture)
+                    // Copying means the user wanted the image elsewhere, not another file in the save folder.
+                    if let url = item.savedURL {
+                        if try self.actions.copyInsteadOfSaving(item.capture, savedURL: url) {
+                            item.savedURL = nil
+                        }
+                    } else {
+                        try self.actions.copy(item.capture)
+                    }
                     Toast.show("Copied", systemImage: "doc.on.clipboard")
                 }
                 self.close(item)
