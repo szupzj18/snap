@@ -38,7 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         coordinator.scrolling = scrolling
         let statusItemController = StatusItemController(
             coordinator: coordinator, settingsWindow: settingsWindow, historyWindow: historyWindow, recording: recording,
-            updates: updates, imports: imports
+            updates: updates, imports: imports, pins: pins
         )
         updates.onUpdateAvailable = { [weak statusItemController] release in statusItemController?.showUpdate(release) }
         updates.start()

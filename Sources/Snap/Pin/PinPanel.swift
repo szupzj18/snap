@@ -3,7 +3,8 @@ import SnapCore
 
 /// An always-on-top window showing one capture.
 ///
-/// Drag to move, scroll or pinch to zoom, ⌥-scroll to change opacity, right-click for more.
+/// Drag or use the arrow keys to move, scroll or pinch to zoom, ⌥-scroll to change opacity,
+/// ⌘L to lock (clicks go through to the app below), right-click for more.
 final class PinPanel: NSPanel {
     var onCopy: (() -> Void)?
     var onSave: (() -> Void)?
@@ -11,6 +12,17 @@ final class PinPanel: NSPanel {
     /// A file of the capture for the Share menu, made when the menu opens.
     var fileForShare: (() -> URL?)?
     var onClose: (() -> Void)?
+    /// A locked pin lets every click through to the windows below it, so it can stay over an app
+    /// the user is working in. It can't take clicks itself any more: unlock from the menu bar.
+    var isLocked = false {
+        didSet {
+            guard isLocked != oldValue else { return }
+            ignoresMouseEvents = isLocked
+            pinView.showsLock = isLocked
+            if isLocked { resignKey() }
+            hud.flash(isLocked ? "Locked" : "Unlocked", in: pinView)
+        }
+    }
 
     private let imageSize: CGSize
     private let pinView: PinView
@@ -72,6 +84,10 @@ final class PinPanel: NSPanel {
 
     override func keyDown(with event: NSEvent) {
         let command = event.modifierFlags.contains(.command)
+        if !command, let offset = KeyNudge.offset(keyCode: event.keyCode, shift: event.modifierFlags.contains(.shift)) {
+            setFrameOrigin(CGPoint(x: frame.minX + offset.dx, y: frame.minY + offset.dy))
+            return
+        }
         switch (event.keyCode, command, event.charactersIgnoringModifiers) {
         case (53, _, _): onClose?() // Esc
         case (_, true, "w"): onClose?()
@@ -80,6 +96,7 @@ final class PinPanel: NSPanel {
         case (_, true, "="), (_, true, "+"): zoomBy(1.25)
         case (_, true, "-"): zoomBy(0.8)
         case (_, true, "0"): setZoom(1)
+        case (_, true, "l"): isLocked = true
         default: super.keyDown(with: event)
         }
     }
@@ -107,6 +124,7 @@ final class PinPanel: NSPanel {
         }
         opacity.submenu = opacityMenu
         menu.addItem(opacity)
+        menu.addItem(item("Lock (Click Through)", key: "l") { [weak self] in self?.isLocked = true })
         menu.addItem(.separator())
         menu.addItem(item("Close", key: "w") { [weak self] in self?.onClose?() })
         return menu
@@ -136,6 +154,14 @@ final class ClosureMenuItem: NSMenuItem {
 private final class PinView: NSView {
     weak var panel: PinPanel?
     private let closeButton = NSButton()
+    private let lockBadge = NSImageView()
+
+    var showsLock = false {
+        didSet {
+            lockBadge.isHidden = !showsLock
+            if showsLock { closeButton.isHidden = true }
+        }
+    }
 
     init(image: CGImage) {
         super.init(frame: .zero)
@@ -153,6 +179,15 @@ private final class PinView: NSView {
         closeButton.frame = CGRect(x: 6, y: 0, width: 22, height: 22)
         closeButton.isHidden = true
         addSubview(closeButton)
+
+        lockBadge.image = NSImage(systemSymbolName: "lock.fill", accessibilityDescription: "Locked")
+        lockBadge.contentTintColor = .white
+        lockBadge.wantsLayer = true
+        lockBadge.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.55).cgColor
+        lockBadge.layer?.cornerRadius = 9
+        lockBadge.frame = CGRect(x: 0, y: 0, width: 18, height: 18)
+        lockBadge.isHidden = true
+        addSubview(lockBadge)
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
@@ -163,6 +198,7 @@ private final class PinView: NSView {
     override func layout() {
         super.layout()
         closeButton.frame.origin = CGPoint(x: 6, y: bounds.height - 28)
+        lockBadge.frame.origin = CGPoint(x: bounds.width - 24, y: bounds.height - 24)
     }
 
     override func updateTrackingAreas() {
@@ -171,7 +207,7 @@ private final class PinView: NSView {
         addTrackingArea(NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self))
     }
 
-    override func mouseEntered(with event: NSEvent) { closeButton.isHidden = false }
+    override func mouseEntered(with event: NSEvent) { closeButton.isHidden = showsLock }
     override func mouseExited(with event: NSEvent) { closeButton.isHidden = true }
 
     override func mouseDown(with event: NSEvent) {

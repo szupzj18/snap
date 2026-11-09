@@ -43,8 +43,10 @@ Retina scaling.
   to share; a light or dark Mac window or browser frame can wrap the screenshot. Hold Shift for squares and 45° arrows, Option to draw from the center.
 - **Existing images**: Open Image… annotates any image file; Annotate / Pin Clipboard Image work
   on whatever image you copied (image data or a copied file).
-- **Pins**: keep a capture floating above all windows. Drag to move, scroll or pinch to zoom,
-  ⌥-scroll to change opacity, right-click for more.
+- **Pins**: keep a capture floating above all windows. Drag or use the arrow keys to move
+  (⇧ for 10 pt), scroll or pinch to zoom, ⌥-scroll to change opacity, right-click for more.
+  Lock a pin (⌘L) to click through it into the app below; Unlock All Pins and Close All Pins
+  are in the menu bar.
 - **History**: the last 50 captures (configurable) are kept, so a closed preview is never lost.
   Open History… from the menu bar to copy, annotate, pin, drag out or reveal any of them.
 - **Settings**: save folder, file name template, after-capture actions, shortcuts, and an

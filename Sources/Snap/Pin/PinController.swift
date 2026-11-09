@@ -7,6 +7,8 @@ final class PinController {
     private let actions: CaptureActions
     private let editors: EditorPresenter
     private var pins: [PinPanel] = []
+    var hasPins: Bool { !pins.isEmpty }
+    var hasLockedPins: Bool { pins.contains { $0.isLocked } }
 
     init(actions: CaptureActions, editors: EditorPresenter) {
         self.actions = actions
@@ -31,6 +33,15 @@ final class PinController {
         pins.append(panel)
         panel.orderFrontRegardless()
         panel.makeKey()
+    }
+
+    func unlockAll() {
+        pins.forEach { $0.isLocked = false }
+    }
+
+    func closeAll() {
+        pins.forEach { $0.orderOut(nil) }
+        pins.removeAll()
     }
 
     private func perform(_ action: () throws -> Void) {

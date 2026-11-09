@@ -12,6 +12,9 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private let recording: RecordingController
     private let updates: UpdateChecker
     private let imports: ImageImportController
+    private let pins: PinController
+    private var unlockPinsItem: NSMenuItem?
+    private var closePinsItem: NSMenuItem?
     private lazy var mainMenu = makeMenu()
     /// Enabled only when the clipboard holds an image.
     private var clipboardItems: [NSMenuItem] = []
@@ -24,7 +27,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         historyWindow: HistoryWindowController,
         recording: RecordingController,
         updates: UpdateChecker,
-        imports: ImageImportController
+        imports: ImageImportController,
+        pins: PinController
     ) {
         self.coordinator = coordinator
         self.settingsWindow = settingsWindow
@@ -32,6 +36,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         self.recording = recording
         self.updates = updates
         self.imports = imports
+        self.pins = pins
         super.init()
         showIdle()
     }
@@ -120,6 +125,14 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         clipboardItems = [annotate, pin]
         clipboardItems.forEach(menu.addItem)
         menu.addItem(.separator())
+        // Locked pins ignore clicks, so this is the way back to them.
+        let unlockPins = ClosureMenuItem(title: "Unlock All Pins") { [weak self] in self?.pins.unlockAll() }
+        let closePins = ClosureMenuItem(title: "Close All Pins") { [weak self] in self?.pins.closeAll() }
+        unlockPinsItem = unlockPins
+        closePinsItem = closePins
+        menu.addItem(unlockPins)
+        menu.addItem(closePins)
+        menu.addItem(.separator())
         let history = NSMenuItem(title: "History…", action: #selector(openHistory), keyEquivalent: "")
         history.target = self
         menu.addItem(history)
@@ -138,6 +151,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) {
         let hasImage = imports.clipboardHasImage
         clipboardItems.forEach { $0.isEnabled = hasImage }
+        unlockPinsItem?.isEnabled = pins.hasLockedPins
+        closePinsItem?.isEnabled = pins.hasPins
     }
 
     /// Puts "Snap x.y.z Is Available…" at the top of the menu, or removes it.
